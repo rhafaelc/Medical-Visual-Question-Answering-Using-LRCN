@@ -1,10 +1,17 @@
 [project]
-name = "coba"
+name = "MedVQA-LRCN"
 version = "0.1.0"
-description = "Add your description here"
+description = "Adaptation of Layer-Residual Co-Attention Network (LRCN) for Medical Visual Question Answering (MedVQA)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "datasets>=4.0.0",
     "ipykernel>=6.30.1",
     "numpy>=2.3.2",
+    "osfclient>=0.0.5",
 ]
+
+[project.scripts]
+get_vqa_rad = "medvqa.scripts.get_vqa_rad_osf:main"
+get_slake_all = "medvqa.scripts.get_slake_hf:main"
+get_all_data = "medvqa.scripts.get_all_data:main"

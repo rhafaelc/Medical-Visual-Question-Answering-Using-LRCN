@@ -8,3 +8,25 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Data
+data/
+
+# Models & Experiments
+models/
+experiments/
+logs/
+
+# Jupyter/Notebooks
+*.ipynb_checkpoints
+notebooks/*-checkpoint.ipynb
+.notebook_cache/
+*.nbconvert.ipynb
+
+# OS & Editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
