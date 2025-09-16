@@ -10,6 +10,16 @@ TMP = ensure_dir(RAW / "_tmp")
 NEEDED = {"train.json", "validation.json", "test.json", "imgs.zip"}
 
 
+def _summarize():
+    images = RAW / "images"
+    ann = RAW / "annotations"
+    n_img = sum(1 for _ in images.glob("*")) if images.exists() else 0
+    n_ann = sum(1 for _ in ann.glob("*.json")) if ann.exists() else 0
+    print("\n[Listing]")
+    print(f"{images}: {n_img} files")
+    print(f"{ann}: {n_ann} files")
+
+
 def main():
     repo = Path(snapshot_download(repo_id="BoKelvin/SLAKE", repo_type="dataset"))
     for p in repo.iterdir():
@@ -34,7 +44,9 @@ def main():
     import shutil
 
     shutil.rmtree(TMP, ignore_errors=True)
+
     print(f"[OK] slake_all -> {RAW / 'images'} , {ann}")
+    _summarize()
     return 0
 
 

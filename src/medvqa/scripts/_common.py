@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import shutil, zipfile, time, json
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
 
@@ -38,24 +38,29 @@ def verify_json(path):
     return True
 
 
-def osf_download_many(jobs, max_workers=16, retries=3, backoff=1.5):
-    def _dl(args):
-        fobj, dest = args
+def osf_download_many(
+    jobs, max_workers=16, retries=3, backoff=1.5, desc="Downloading VQA-RAD"
+):
+    # jobs: iterable of (fobj, dest_path)
+    jobs = list(jobs)
+
+    def _dl(fobj, dest):
         dest = Path(dest)
-        if dest.exists() and dest.stat().st_size > 0:
-            return dest
         dest.parent.mkdir(parents=True, exist_ok=True)
         for i in range(retries):
             try:
                 with dest.open("wb") as fp:
                     fobj.write_to(fp)
-                return dest
+                if dest.stat().st_size > 0:
+                    return dest
             except Exception:
                 time.sleep(backoff**i)
-        return dest
+        return dest  # may be empty if all retries failed
 
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        for _ in tqdm(
-            ex.map(_dl, jobs), total=len(jobs), unit="file", desc="Downloading VQA-RAD"
-        ):
-            pass
+    with (
+        ThreadPoolExecutor(max_workers=max_workers) as ex,
+        tqdm(total=len(jobs), unit="file", desc=desc, dynamic_ncols=True) as bar,
+    ):
+        futures = [ex.submit(_dl, fobj, dest) for (fobj, dest) in jobs]
+        for _ in as_completed(futures):
+            bar.update(1)

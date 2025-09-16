@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 from pathlib import Path
-from osfclient.api import OSF
-from ._common import project_root, ensure_dir, osf_download_many, safe_move
-import shutil
+import requests, zipfile, io, shutil
+from ._common import project_root, ensure_dir, safe_move
 
 ROOT = project_root(__file__)
 RAW = ensure_dir(ROOT / "data" / "raw" / "vqa-rad")
 TMP = ensure_dir(RAW / "_tmp")
+
+ZIP_URL = "https://files.osf.io/v1/resources/89kps/providers/osfstorage/?zip="
 
 IMG_EXT = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
 ANN_EXT = (".json", ".csv", ".tsv", ".xlsx", ".xls", ".xml", ".docx", ".txt")
@@ -18,29 +19,34 @@ KEEP_AT_ROOT = {
 }
 
 
-def _walk_files():
-    osf = OSF()
-    store = osf.project("89kps").storage("osfstorage")
-    img_folder = next(
-        (f for f in store.folders if f.name.lower() == "vqa_rad image folder".lower()),
-        None,
-    )
-    if not img_folder:
-        raise SystemExit("VQA_RAD Image Folder not found")
+def _extract_all(buf):
+    images = ensure_dir(TMP / "images_raw")
+    ann = ensure_dir(TMP / "ann_raw")
+    with zipfile.ZipFile(io.BytesIO(buf)) as zf:
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            name = Path(info.filename).name
+            lo = name.lower()
+            if lo.endswith(IMG_EXT):
+                out = images / name
+            elif lo.endswith(ANN_EXT) or name in KEEP_AT_ROOT:
+                out = ann / name
+            else:
+                continue
+            out.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info, "r") as src, out.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
 
-    def rec(folder):
-        for f in folder.files:
-            yield f
-        for sub in folder.folders:
-            yield from rec(sub)
 
-    img_files = list(rec(img_folder))
-    root_files = [
-        f
-        for f in store.files
-        if f.name in KEEP_AT_ROOT or any(f.name.lower().endswith(e) for e in ANN_EXT)
-    ]
-    return img_files, root_files
+def _summarize():
+    images = RAW / "images"
+    ann = RAW / "annotations"
+    n_img = sum(1 for _ in images.glob("*")) if images.exists() else 0
+    n_ann = sum(1 for _ in ann.glob("*")) if ann.exists() else 0
+    print("\n[Listing]")
+    print(f"{images}: {n_img} files")
+    print(f"{ann}: {n_ann} files")
 
 
 def _normalize():
@@ -49,18 +55,21 @@ def _normalize():
     for p in TMP.rglob("*"):
         if not p.is_file():
             continue
-        name = p.name.lower()
-        target = images / p.name if name.endswith(IMG_EXT) else ann / p.name
+        lo = p.name.lower()
+        target = images / p.name if lo.endswith(IMG_EXT) else ann / p.name
         safe_move(p, target)
     shutil.rmtree(TMP, ignore_errors=True)
     print(f"[OK] vqa-rad -> {images} , {ann}")
+    _summarize()
 
 
 def main():
-    img_files, ann_files = _walk_files()
-    jobs = [(f, TMP / "images_raw" / f.name) for f in img_files]
-    jobs += [(f, TMP / "ann_raw" / f.name) for f in ann_files]
-    osf_download_many(jobs)
+    print("[OSF] downloading full project zip …")
+    resp = requests.get(ZIP_URL, stream=True, timeout=300)
+    resp.raise_for_status()
+    buf = resp.content
+    print(f"[OSF] zip size = {len(buf)/1e6:.1f} MB")
+    _extract_all(buf)
     _normalize()
     return 0
 
