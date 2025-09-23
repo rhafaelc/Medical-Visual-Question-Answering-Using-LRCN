@@ -13,7 +13,7 @@ wheels/
 data/
 
 # Models & Experiments
-models/
+# models/
 experiments/
 logs/
 
