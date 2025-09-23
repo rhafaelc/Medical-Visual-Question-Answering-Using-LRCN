@@ -257,3 +257,7 @@ class LRCN(DeviceMixin, nn.Module):
             "attention": attention_params,
             "decoder": decoder_params,
         }
+
+
+# Alias for backward compatibility
+LRCNModel = LRCN

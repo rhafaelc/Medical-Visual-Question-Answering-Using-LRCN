@@ -41,3 +41,24 @@ class DeviceMixin:
         args = tuple(move_to_device(arg, self.device) for arg in args)
         kwargs = {k: move_to_device(v, self.device) for k, v in kwargs.items()}
         return super().forward(*args, **kwargs)
+
+
+class DeviceManager:
+    """Device manager for getting optimal device."""
+
+    def __init__(self):
+        self._device = None
+
+    def get_device(self) -> torch.device:
+        """Get the best available device."""
+        if self._device is None:
+            self._device = get_device()
+        return self._device
+
+    def set_device(self, device: torch.device):
+        """Manually set device."""
+        self._device = device
+
+    def reset(self):
+        """Reset device selection."""
+        self._device = None
