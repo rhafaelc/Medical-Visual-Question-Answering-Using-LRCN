@@ -73,6 +73,11 @@ class VqaRadDownloader(BaseDatasetDownloader):
 
 def main() -> int:
     """Main entry point for VQA-RAD download."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Download VQA-RAD dataset from OSF")
+    parser.parse_args()
+
     downloader = VqaRadDownloader()
     return downloader.download()
 

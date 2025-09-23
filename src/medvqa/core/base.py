@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from .config import DatasetConfig
+from .config import DatasetConfig, ModelConfig
 
 
 class DatasetSummary:
@@ -58,7 +58,7 @@ class BaseDatasetLoader(ABC):
         answer_lower = str(answer or "").strip().lower()
 
         # Check for closed-ended patterns
-        if answer_lower in DatasetConfig.ModelConfig.ANSWER_TYPE_CLOSED_KEYWORDS:
+        if answer_lower in ModelConfig.ANSWER_TYPE_CLOSED_KEYWORDS:
             return "closed"
         if answer_lower.replace(".", "", 1).isdigit():
             return "closed"

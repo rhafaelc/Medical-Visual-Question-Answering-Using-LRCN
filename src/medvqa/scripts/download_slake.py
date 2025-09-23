@@ -73,6 +73,13 @@ class SlakeDownloader(BaseDatasetDownloader):
 
 def main() -> int:
     """Main entry point for SLAKE download."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Download SLAKE dataset from HuggingFace"
+    )
+    parser.parse_args()
+
     downloader = SlakeDownloader()
     return downloader.download()
 

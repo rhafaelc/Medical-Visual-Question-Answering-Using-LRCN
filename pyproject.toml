@@ -21,9 +21,3 @@ download-slake = "medvqa.scripts.download_slake:main"
 download-all-datasets = "medvqa.scripts.download_all:main"
 preview-datasets = "medvqa.scripts.preview_datasets:main"
 
-# Legacy aliases for backward compatibility
-get_vqa_rad = "medvqa.scripts.download_vqa_rad:main"
-get_slake_all = "medvqa.scripts.download_slake:main"
-get_all_data = "medvqa.scripts.download_all:main"
-preview_data = "medvqa.scripts.preview_datasets:main"
-

@@ -1,11 +1,18 @@
 """Download all datasets for Medical VQA LRCN project."""
 
+import argparse
+
 from .download_slake import main as download_slake_main
 from .download_vqa_rad import main as download_vqa_rad_main
 
 
 def main() -> int:
     """Download all available datasets."""
+    parser = argparse.ArgumentParser(
+        description="Download all Medical VQA datasets (SLAKE and VQA-RAD)"
+    )
+    parser.parse_args()
+
     print("[INFO] Starting download of all datasets...")
 
     # Download VQA-RAD
