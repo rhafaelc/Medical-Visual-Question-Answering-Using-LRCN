@@ -78,7 +78,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Download SLAKE dataset from HuggingFace"
     )
-    parser.parse_args()
+    parser.parse_known_args()
 
     downloader = SlakeDownloader()
     return downloader.download()

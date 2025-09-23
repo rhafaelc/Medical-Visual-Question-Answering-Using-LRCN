@@ -76,7 +76,7 @@ def main() -> int:
     import argparse
 
     parser = argparse.ArgumentParser(description="Download VQA-RAD dataset from OSF")
-    parser.parse_args()
+    parser.parse_known_args()
 
     downloader = VqaRadDownloader()
     return downloader.download()

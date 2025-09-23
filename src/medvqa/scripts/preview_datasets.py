@@ -67,7 +67,7 @@ def main() -> int:
         "--pretty", action="store_true", help="Pretty-print JSON output"
     )
 
-    args = parser.parse_args()
+    args = parser.parse_known_args()[0]
 
     datasets_to_load = []
 

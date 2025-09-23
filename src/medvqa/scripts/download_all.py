@@ -11,7 +11,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Download all Medical VQA datasets (SLAKE and VQA-RAD)"
     )
-    parser.parse_args()
+    parser.parse_known_args()
 
     print("[INFO] Starting download of all datasets...")
 
