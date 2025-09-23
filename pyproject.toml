@@ -16,8 +16,14 @@ package = true
 
 
 [project.scripts]
-get_vqa_rad = "medvqa.scripts.get_vqa_rad_osf:main"
-get_slake_all = "medvqa.scripts.get_slake_hf:main"
-get_all_data = "medvqa.scripts.get_all_data:main"
-preview_data  = "medvqa.scripts.preview_data:main"
+download-vqa-rad = "medvqa.scripts.download_vqa_rad:main"
+download-slake = "medvqa.scripts.download_slake:main"  
+download-all-datasets = "medvqa.scripts.download_all:main"
+preview-datasets = "medvqa.scripts.preview_datasets:main"
+
+# Legacy aliases for backward compatibility
+get_vqa_rad = "medvqa.scripts.download_vqa_rad:main"
+get_slake_all = "medvqa.scripts.download_slake:main"
+get_all_data = "medvqa.scripts.download_all:main"
+preview_data = "medvqa.scripts.preview_datasets:main"
 
