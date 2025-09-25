@@ -5,13 +5,12 @@ import torch.nn as nn
 from typing import Optional, Union
 
 from ..core.config import ModelConfig
-from .device_utils import DeviceMixin
 from .visual_encoder import ViTVisualEncoder
 from .text_encoder import BioBERTTextEncoder
 from .attention import LayerResidualMechanism
 
 
-class LRCN(DeviceMixin, nn.Module):
+class LRCN(nn.Module):
     """Layer-Residual Co-Attention Network for Medical VQA.
 
     Implementation of Han et al.'s LRCN adapted for medical domain:
@@ -257,7 +256,3 @@ class LRCN(DeviceMixin, nn.Module):
             "attention": attention_params,
             "decoder": decoder_params,
         }
-
-
-# Alias for backward compatibility
-LRCNModel = LRCN

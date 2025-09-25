@@ -5,10 +5,9 @@ import torch.nn as nn
 from transformers import AutoTokenizer, AutoModel
 
 from ..core.config import ModelConfig
-from .device_utils import DeviceMixin
 
 
-class BioBERTTextEncoder(DeviceMixin, nn.Module):
+class BioBERTTextEncoder(nn.Module):
     """BioBERT encoder for medical question understanding.
 
     Replaces GloVe + LSTM from original LRCN with BioBERT
@@ -74,8 +73,8 @@ class BioBERTTextEncoder(DeviceMixin, nn.Module):
         )
 
         # Move to device
-        input_ids = encoding["input_ids"].to(self.device)
-        attention_mask = encoding["attention_mask"].to(self.device)
+        input_ids = encoding["input_ids"].to(next(self.parameters()).device)
+        attention_mask = encoding["attention_mask"].to(next(self.parameters()).device)
 
         # Encode with BioBERT
         outputs = self.bert(

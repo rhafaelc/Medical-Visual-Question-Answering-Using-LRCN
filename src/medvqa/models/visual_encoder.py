@@ -5,10 +5,9 @@ import torch.nn as nn
 from transformers import ViTModel, ViTConfig
 
 from ..core.config import ModelConfig
-from .device_utils import DeviceMixin
 
 
-class ViTVisualEncoder(DeviceMixin, nn.Module):
+class ViTVisualEncoder(nn.Module):
     """Vision Transformer encoder for medical image feature extraction.
 
     Replaces ResNeXt-152 from original LRCN with ViT backbone
@@ -69,9 +68,6 @@ class ViTVisualEncoder(DeviceMixin, nn.Module):
             Visual features [batch_size, num_patches + 1, hidden_dim]
             Note: +1 for [CLS] token
         """
-        # Ensure images are on correct device
-        images = images.to(self.device)
-
         # Extract features using ViT
         outputs = self.vit(pixel_values=images)
 
