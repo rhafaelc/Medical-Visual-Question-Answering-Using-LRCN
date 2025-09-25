@@ -6,7 +6,6 @@ import torch.nn.functional as F
 from typing import Optional, Tuple
 
 from ..core.config import ModelConfig
-from .device_utils import DeviceMixin
 
 
 class MultiHeadAttention(nn.Module):
@@ -98,7 +97,7 @@ class MultiHeadAttention(nn.Module):
         return output, attention_weights
 
 
-class SelfAttentionBlock(DeviceMixin, nn.Module):
+class SelfAttentionBlock(nn.Module):
     """Self-attention block for LRCN."""
 
     def __init__(
@@ -152,7 +151,7 @@ class SelfAttentionBlock(DeviceMixin, nn.Module):
         return x, attention_weights
 
 
-class GuidedAttentionBlock(DeviceMixin, nn.Module):
+class GuidedAttentionBlock(nn.Module):
     """Guided attention block for cross-modal interaction."""
 
     def __init__(
@@ -213,7 +212,7 @@ class GuidedAttentionBlock(DeviceMixin, nn.Module):
         return visual_features, attention_weights
 
 
-class LayerResidualMechanism(DeviceMixin, nn.Module):
+class LayerResidualMechanism(nn.Module):
     """Layer-Residual Mechanism (LRM) - Core innovation of LRCN.
 
     Addresses information dispersion by maintaining residual connections
