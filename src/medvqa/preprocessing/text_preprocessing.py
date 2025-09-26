@@ -231,7 +231,9 @@ class AnswerPreprocessor:
         if self.top_k is None:
             sorted_answers = self.answer_counts.most_common()
             cumulative_count = 0
-            coverage_threshold = (self.coverage_percentile / 100.0) * total_answers
+            coverage_threshold = (
+                self.coverage_percentile / ModelConfig.PERCENTAGE_DIVISOR
+            ) * total_answers
 
             for i, (answer, count) in enumerate(sorted_answers):
                 cumulative_count += count
@@ -243,7 +245,7 @@ class AnswerPreprocessor:
                 f"Selected top-{self.top_k} answers for {self.coverage_percentile}% coverage"
             )
             print(
-                f"Coverage: {cumulative_count}/{total_answers} = {100*cumulative_count/total_answers:.1f}%"
+                f"Coverage: {cumulative_count}/{total_answers} = {ModelConfig.PERCENTAGE_DIVISOR*cumulative_count/total_answers:.1f}%"
             )
 
         # Step 4: Create vocabulary
@@ -259,7 +261,9 @@ class AnswerPreprocessor:
         self.idx_to_answer = {idx: answer for answer, idx in self.answer_to_idx.items()}
 
         print(f"Answer vocabulary size: {len(self.answer_vocab)}")
-        print(f"Top answers: {top_answers[:10]}...")  # Show first 10
+        print(
+            f"Top answers: {top_answers[:ModelConfig.TOP_ANSWERS_PREVIEW]}..."
+        )  # Show first 10
 
         return self.answer_to_idx
 
@@ -346,7 +350,7 @@ class AnswerPreprocessor:
                 weight = total_samples / (len(vocab_counts) * count)
                 weights.append(weight)
             else:
-                weights.append(1.0)
+                weights.append(ModelConfig.DEFAULT_WEIGHT)
 
         return torch.tensor(weights, dtype=torch.float32)
 

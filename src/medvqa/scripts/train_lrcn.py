@@ -5,16 +5,15 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List
 
 
 def main():
     def __init__(
         self,
-        data: List[Dict],
-        image_processor: ImagePreprocessor,
-        question_processor: QuestionPreprocessor,
-        answer_processor: AnswerPreprocessor,
+        data,
+        image_processor,
+        question_processor,
+        answer_processor,
     ):
         self.data = data
         self.image_processor = image_processor
@@ -30,7 +29,7 @@ def main():
         try:
             image = self.image_processor.load_and_preprocess(item["image"])
         except Exception:
-            image = torch.randn(3, 224, 224)
+            image = torch.randn(3, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE)
 
         question_tokens = self.question_processor.encode(item["question"])
         question_tensor = torch.tensor(question_tokens, dtype=torch.long)
@@ -104,7 +103,9 @@ def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None)
         loss = criterion(outputs, answers)
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(
+            model.parameters(), max_norm=ModelConfig.GRADIENT_CLIP_NORM
+        )
         optimizer.step()
 
         if scheduler:
@@ -188,10 +189,23 @@ def validate_epoch(model, dataloader, criterion, device):
 def main():
     parser = argparse.ArgumentParser(description="Train Medical VQA LRCN model")
     parser.add_argument(
-        "--epochs", type=int, default=15, help="Number of training epochs"
+        "--epochs",
+        type=int,
+        default=ModelConfig.DEFAULT_EPOCHS,
+        help="Number of training epochs",
     )
-    parser.add_argument("--batch-size", type=int, default=16, help="Batch size")
-    parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=ModelConfig.DEFAULT_TRAINING_BATCH_SIZE,
+        help="Batch size",
+    )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=ModelConfig.DEFAULT_LEARNING_RATE,
+        help="Learning rate",
+    )
     parser.add_argument("--save-model", action="store_true", help="Save trained model")
     parser.add_argument(
         "--results-dir", type=str, default="results", help="Results directory"
@@ -212,8 +226,12 @@ def main():
         from ..models.lrcn import LRCN
         from ..datamodules.common import load_slake, load_vqa_rad
         from ..preprocessing.image_preprocessing import ImagePreprocessor
-        from ..preprocessing.text_preprocessing import QuestionPreprocessor, AnswerPreprocessor
+        from ..preprocessing.text_preprocessing import (
+            QuestionPreprocessor,
+            AnswerPreprocessor,
+        )
         from ..core.download_utils import DownloadUtils
+        from ..core.config import ModelConfig
 
         class MedVQADataset(Dataset):
             def __init__(
@@ -237,7 +255,9 @@ def main():
                 try:
                     image = self.image_processor.load_and_preprocess(item["image"])
                 except Exception:
-                    image = torch.randn(3, 224, 224)
+                    image = torch.randn(
+                        3, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE
+                    )
 
                 question_tokens = self.question_processor.encode(item["question"])
                 question_tensor = torch.tensor(question_tokens, dtype=torch.long)
@@ -276,12 +296,16 @@ def main():
             closed_mask = torch.tensor([t == "closed" for t in answer_types])
             open_mask = torch.tensor([t == "open" for t in answer_types])
 
-            closed_acc = correct[closed_mask].mean().item() if closed_mask.sum() > 0 else 0.0
+            closed_acc = (
+                correct[closed_mask].mean().item() if closed_mask.sum() > 0 else 0.0
+            )
             open_acc = correct[open_mask].mean().item() if open_mask.sum() > 0 else 0.0
 
             return overall_acc, closed_acc, open_acc
 
-        def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None):
+        def train_epoch(
+            model, dataloader, optimizer, criterion, device, scheduler=None
+        ):
             model.train()
             total_loss = 0.0
             total_acc = 0.0
@@ -308,13 +332,17 @@ def main():
                 loss = criterion(outputs, answers)
 
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), max_norm=ModelConfig.GRADIENT_CLIP_NORM
+                )
                 optimizer.step()
 
                 if scheduler:
                     scheduler.step()
 
-                acc, closed_acc, open_acc = compute_accuracy(outputs, answers, answer_types)
+                acc, closed_acc, open_acc = compute_accuracy(
+                    outputs, answers, answer_types
+                )
 
                 total_loss += loss.item()
                 total_acc += acc
@@ -358,12 +386,15 @@ def main():
                     outputs = model(images, questions)
                     if isinstance(outputs, dict):
                         outputs = outputs.get(
-                            "logits", outputs.get("predictions", list(outputs.values())[0])
+                            "logits",
+                            outputs.get("predictions", list(outputs.values())[0]),
                         )
 
                     loss = criterion(outputs, answers)
 
-                    acc, closed_acc, open_acc = compute_accuracy(outputs, answers, answer_types)
+                    acc, closed_acc, open_acc = compute_accuracy(
+                        outputs, answers, answer_types
+                    )
 
                     total_loss += loss.item()
                     total_acc += acc
@@ -386,6 +417,7 @@ def main():
                 "closed_accuracy": total_closed_acc / num_batches,
                 "open_accuracy": total_open_acc / num_batches,
             }
+
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Device: {device}")
         if torch.cuda.is_available():

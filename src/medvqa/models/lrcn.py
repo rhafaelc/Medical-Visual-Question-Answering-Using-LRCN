@@ -32,7 +32,7 @@ class LRCN(nn.Module):
         vit_pretrained: bool = True,
         # Text encoder
         biobert_model: str = "dmis-lab/biobert-base-cased-v1.1",
-        max_text_length: int = 128,
+        max_text_length: int = ModelConfig.MAX_TEXT_LENGTH,
         freeze_biobert: bool = False,
         # Answer vocabulary
         num_classes: int = 1000,  # Will be set based on answer vocabulary

@@ -18,7 +18,7 @@ class BioBERTTextEncoder(nn.Module):
         self,
         model_name: str = "dmis-lab/biobert-base-cased-v1.1",
         hidden_dim: int = ModelConfig.HIDDEN_DIM,
-        max_length: int = 128,
+        max_length: int = ModelConfig.MAX_TEXT_LENGTH,
         freeze_bert: bool = False,
     ):
         super().__init__()

@@ -6,7 +6,7 @@ from PIL import Image, ImageEnhance
 import numpy as np
 from typing import Union, Tuple
 
-from ..core.config import ModelConfig
+from ..core.config import DatasetConfig, ModelConfig
 
 
 class ImagePreprocessor:
@@ -50,7 +50,7 @@ class ImagePreprocessor:
                 if max_val > min_val:
                     stretched_array[:, :, channel] = (
                         (channel_data - min_val) / (max_val - min_val)
-                    ) * 255
+                    ) * ModelConfig.PIXEL_MAX_VALUE
                 else:
                     stretched_array[:, :, channel] = channel_data
         else:  # Grayscale image
@@ -59,12 +59,16 @@ class ImagePreprocessor:
 
             # Min-max normalization to [0, 255] range
             if max_val > min_val:
-                stretched_array = ((img_array - min_val) / (max_val - min_val)) * 255
+                stretched_array = (
+                    (img_array - min_val) / (max_val - min_val)
+                ) * ModelConfig.PIXEL_MAX_VALUE
             else:
                 stretched_array = img_array
 
         # Convert back to uint8 and PIL Image
-        stretched_array = np.clip(stretched_array, 0, 255).astype(np.uint8)
+        stretched_array = np.clip(
+            stretched_array, 0, ModelConfig.PIXEL_MAX_VALUE
+        ).astype(np.uint8)
         return Image.fromarray(stretched_array)
 
     def preprocess(self, image: Union[Image.Image, str, np.ndarray]) -> torch.Tensor:
@@ -143,13 +147,16 @@ class MedicalImageNormalizer:
     def imagenet_normalize():
         """ImageNet normalization for pretrained models."""
         return transforms.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            mean=ModelConfig.IMAGENET_MEAN, std=ModelConfig.IMAGENET_STD
         )
 
     @staticmethod
     def medical_normalize():
         """Medical-specific normalization to [0,1] range."""
-        return transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        return transforms.Normalize(
+            mean=ModelConfig.MEDICAL_NORMALIZE_MEAN,
+            std=ModelConfig.MEDICAL_NORMALIZE_STD,
+        )
 
     @staticmethod
     def zero_one_normalize():

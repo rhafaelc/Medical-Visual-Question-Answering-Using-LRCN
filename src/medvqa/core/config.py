@@ -48,20 +48,44 @@ class DatasetConfig:
 class ModelConfig:
     """Configuration constants for model architecture."""
 
-    # Image preprocessing
     IMAGE_SIZE = 224
     PATCH_SIZE = 16
     NORMALIZE_RANGE = (0, 1)
-
-    # Text preprocessing
     ANSWER_TYPE_CLOSED_KEYWORDS = {"yes", "no"}
-    COVERAGE_PERCENTILE = 95  # For Lmax and top-K selection
-
-    # Model architecture
+    COVERAGE_PERCENTILE = 95
     HIDDEN_DIM = 512
     ATTENTION_HEADS = 8
+    RANDOM_SEED = 42
+    VQA_RAD_VAL_SPLIT_RATIO = 0.1  # VQA-RAD validation split ratio from training data
 
-    # Training
+    # Image preprocessing constants
+    PIXEL_MAX_VALUE = 255
+    IMAGENET_MEAN = [0.485, 0.456, 0.406]
+    IMAGENET_STD = [0.229, 0.224, 0.225]
+    MEDICAL_NORMALIZE_MEAN = [0.5, 0.5, 0.5]
+    MEDICAL_NORMALIZE_STD = [0.5, 0.5, 0.5]
+
+    # Text preprocessing constants
+    MAX_TEXT_LENGTH = 128
+    PERCENTAGE_DIVISOR = 100.0
+    TOP_ANSWERS_PREVIEW = 10
+    STATISTICS_TOP_ANSWERS = 20
+
+    # Weight constant
+    DEFAULT_WEIGHT = 1.0
+
+    # Training constants
+    DEFAULT_EPOCHS = 15
+    DEFAULT_BATCH_SIZE = 64  # Default for dataloaders
+    DEFAULT_TRAINING_BATCH_SIZE = 16  # Default for training CLI
+    DEFAULT_LEARNING_RATE = 1e-4
+    DEFAULT_NUM_WORKERS = 4
+    GRADIENT_CLIP_NORM = 1.0
+
+    # Overfitting detection thresholds
+    HIGH_OVERFITTING_THRESHOLD = 0.1
+    MODERATE_OVERFITTING_THRESHOLD = 0.05
+
     DEFAULT_SPLITS = {
         "vqa_rad": {"train": 0.72, "validation": 0.08, "test": 0.20},
         "slake": {"train": 0.70, "validation": 0.15, "test": 0.15},

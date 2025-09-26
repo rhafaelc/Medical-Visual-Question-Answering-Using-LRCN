@@ -14,6 +14,7 @@ from collections import Counter
 
 from ..datamodules.slake_loader import load_slake
 from ..datamodules.vqa_rad_loader import load_vqa_rad
+from ..core.config import ModelConfig
 from ..preprocessing.image_preprocessing import ImagePreprocessor
 from ..preprocessing.text_preprocessing import QuestionPreprocessor, AnswerPreprocessor
 from ..core.config import DatasetConfig, ModelConfig
@@ -174,7 +175,9 @@ class DatasetPreprocessor:
                 "closed_percentage": float(closed_count / len(answers) * 100),
                 "open_percentage": float(open_count / len(answers) * 100),
             },
-            "most_frequent_answers": answer_counts.most_common(20),
+            "most_frequent_answers": answer_counts.most_common(
+                ModelConfig.STATISTICS_TOP_ANSWERS
+            ),
             "answer_frequency_stats": {
                 "singleton_answers": sum(
                     1 for count in answer_counts.values() if count == 1

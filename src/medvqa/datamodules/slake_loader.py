@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-from typing import Dict, List
 
 from ..core.base import BaseDatasetLoader
 from ..core.config import DatasetConfig
@@ -15,7 +14,7 @@ class SlakeLoader(BaseDatasetLoader):
     def dataset_name(self) -> str:
         return "slake_all"
 
-    def load(self) -> List[Dict]:
+    def load(self):
         """Load SLAKE dataset with standardized format."""
         if not self.annotations_dir.exists():
             return []
@@ -60,7 +59,7 @@ class SlakeLoader(BaseDatasetLoader):
         return entries
 
 
-def load_slake(root: str = None) -> List[Dict]:
+def load_slake(root=None):
     """Load SLAKE dataset with backward compatibility."""
     if root is None:
         root = DatasetConfig.DEFAULT_ROOT / DatasetConfig.SLAKE_DIR

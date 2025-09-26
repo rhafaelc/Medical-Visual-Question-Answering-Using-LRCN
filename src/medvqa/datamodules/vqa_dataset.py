@@ -6,9 +6,9 @@ Uses preprocessing artifacts built offline and applies sample transformations du
 import json
 import torch
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from torch.utils.data import Dataset
 from PIL import Image
+from ..core.config import ModelConfig
 
 from ..preprocessing.image_preprocessing import ImagePreprocessor
 from ..preprocessing.text_preprocessing import QuestionPreprocessor, AnswerPreprocessor
@@ -23,10 +23,10 @@ class MedVQADataset(Dataset):
 
     def __init__(
         self,
-        data_entries: List[Dict],
-        preprocessing_dir: Path,
-        split: str = "train",
-        image_transforms: Optional[object] = None,
+        data_entries,
+        preprocessing_dir,
+        split,
+        image_transforms=None,
     ):
         """Initialize dataset with preprocessing artifacts.
 
@@ -84,7 +84,7 @@ class MedVQADataset(Dataset):
         self.question_max_length = self.preprocessing_stats["question_max_length"]
         self.num_classes = len(self.answer_vocab)
 
-    def _setup_processors(self, image_transforms: Optional[object] = None) -> None:
+    def _setup_processors(self, image_transforms=None):
         """Setup processors with loaded configurations."""
         # Setup image processor
         if image_transforms is None:
@@ -116,7 +116,7 @@ class MedVQADataset(Dataset):
         """Return dataset size."""
         return len(self.data_entries)
 
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx):
         """Get preprocessed sample for training.
 
         Args:
@@ -199,7 +199,7 @@ class MedVQADataset(Dataset):
             # Uniform weights if not available
             return torch.ones(self.num_classes, dtype=torch.float32)
 
-    def get_dataset_stats(self) -> Dict[str, int]:
+    def get_dataset_stats(self):
         """Get dataset statistics.
 
         Returns:
@@ -217,14 +217,10 @@ class MedVQADataset(Dataset):
 
 def create_dataloaders(
     preprocessing_dir: Path,
-    batch_size: int = 64,
-    num_workers: int = 4,
+    batch_size: int = ModelConfig.DEFAULT_BATCH_SIZE,
+    num_workers: int = ModelConfig.DEFAULT_NUM_WORKERS,
     pin_memory: bool = True,
-) -> Tuple[
-    torch.utils.data.DataLoader,
-    torch.utils.data.DataLoader,
-    torch.utils.data.DataLoader,
-]:
+):
     """Create Medical VQA DataLoaders.
 
     Args:

@@ -4,16 +4,16 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, Any
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 
 from ..core.download_utils import DownloadUtils
+from ..core.config import ModelConfig
 
 
-def plot_training_curves(history: Dict[str, Any], save_path: Path) -> None:
+def plot_training_curves(history, save_path):
     plt.style.use("seaborn-v0_8")
     sns.set_palette("husl")
 
@@ -69,7 +69,7 @@ def plot_training_curves(history: Dict[str, Any], save_path: Path) -> None:
     plt.show()
 
 
-def plot_metrics_summary(final_results: Dict[str, Any], save_path: Path) -> None:
+def plot_metrics_summary(final_results, save_path):
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle("Final Model Performance Summary", fontsize=16, fontweight="bold")
 
@@ -162,7 +162,7 @@ def plot_metrics_summary(final_results: Dict[str, Any], save_path: Path) -> None
     plt.show()
 
 
-def generate_report(final_results: Dict[str, Any], results_dir: Path) -> None:
+def generate_report(final_results, results_dir):
     report_path = results_dir / "training_report.txt"
 
     with open(report_path, "w") as f:
@@ -214,10 +214,14 @@ def generate_report(final_results: Dict[str, Any], results_dir: Path) -> None:
         )
         f.write("ANALYSIS:\n")
         f.write("-" * 30 + "\n")
-        if overfitting_indicator > 0.1:
-            f.write("⚠️  High overfitting detected (train-val gap > 0.1)\n")
-        elif overfitting_indicator > 0.05:
-            f.write("⚡ Moderate overfitting detected (train-val gap > 0.05)\n")
+        if overfitting_indicator > ModelConfig.HIGH_OVERFITTING_THRESHOLD:
+            f.write(
+                f"⚠️  High overfitting detected (train-val gap > {ModelConfig.HIGH_OVERFITTING_THRESHOLD})\n"
+            )
+        elif overfitting_indicator > ModelConfig.MODERATE_OVERFITTING_THRESHOLD:
+            f.write(
+                f"⚡ Moderate overfitting detected (train-val gap > {ModelConfig.MODERATE_OVERFITTING_THRESHOLD})\n"
+            )
         else:
             f.write("✅ Good generalization (low train-val gap)\n")
 
