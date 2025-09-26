@@ -166,6 +166,26 @@ class QuestionPreprocessor:
 
         return " ".join(tokens)
 
+    def get_vocab_size(self) -> int:
+        """Get vocabulary size for model initialization.
+
+        Returns:
+            Size of vocabulary including special tokens
+        """
+        if self.vocab is None:
+            raise ValueError("Vocabulary not built. Call build_vocab() first.")
+        return len(self.vocab)
+
+    def get_vocab_dict(self) -> Dict[str, int]:
+        """Get vocabulary dictionary for serialization.
+
+        Returns:
+            Dictionary mapping words to indices
+        """
+        if self.word_to_idx is None:
+            raise ValueError("Vocabulary not built. Call build_vocab() first.")
+        return self.word_to_idx.copy()
+
 
 class AnswerPreprocessor:
     """Answer preprocessing with top-K vocabulary and label encoding."""
@@ -329,3 +349,23 @@ class AnswerPreprocessor:
                 weights.append(1.0)
 
         return torch.tensor(weights, dtype=torch.float32)
+
+    def get_vocab_dict(self) -> Dict[str, int]:
+        """Get vocabulary dictionary for serialization.
+
+        Returns:
+            Dictionary mapping answers to indices
+        """
+        if self.answer_to_idx is None:
+            raise ValueError("Answer vocabulary not built. Call build_vocab() first.")
+        return self.answer_to_idx.copy()
+
+    def get_answer_counts(self) -> Dict[str, int]:
+        """Get answer frequency counts.
+
+        Returns:
+            Dictionary mapping answers to their frequency counts
+        """
+        if self.answer_counts is None:
+            raise ValueError("Answer vocabulary not built. Call build_vocab() first.")
+        return dict(self.answer_counts)
