@@ -20,20 +20,20 @@
         {
           default = pkgs.mkShell {
             packages = [
-              pkgs.python3
+              pkgs.python312
               pkgs.uv
-              # System libraries for PyTorch
               pkgs.stdenv.cc.cc.lib
-              pkgs.zlib
-              pkgs.glibc
             ];
+
+            env = {
+              LD_LIBRARY_PATH = lib.makeLibraryPath [
+                pkgs.stdenv.cc.cc.lib
+              ];
+            };
 
             shellHook = ''
               unset PYTHONPATH
-              
-              # Set library path for PyTorch
-              export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.zlib}/lib:${pkgs.glibc}/lib:$LD_LIBRARY_PATH"
-              
+              export LD_LIBRARY_PATH="${lib.makeLibraryPath [pkgs.stdenv.cc.cc.lib]}:$LD_LIBRARY_PATH"
               uv sync
               . .venv/bin/activate
             '';

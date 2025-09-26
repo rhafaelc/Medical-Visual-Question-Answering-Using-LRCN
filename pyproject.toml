@@ -12,15 +12,21 @@ dependencies = [
     "torch>=2.0.0",
     "transformers>=4.30.0",
     "huggingface-hub>=0.16.0",
+    "tqdm>=4.65.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "pillow>=10.0.0",
 ]
 
 [tool.uv]
 package = true
-
 
 [project.scripts]
 download-vqa-rad = "medvqa.scripts.download_vqa_rad:main"
 download-slake = "medvqa.scripts.download_slake:main"  
 download-all-datasets = "medvqa.scripts.download_all:main"
 preview-datasets = "medvqa.scripts.preview_datasets:main"
+preprocess-datasets = "medvqa.scripts.preprocess_datasets:main"
+train-lrcn = "medvqa.scripts.train_lrcn:main"
+visualize-results = "medvqa.scripts.visualize_results:main"
 
