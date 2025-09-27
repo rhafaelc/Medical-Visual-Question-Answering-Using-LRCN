@@ -31,5 +31,4 @@ preview-datasets = "medvqa.scripts.preview_datasets:main"
 preprocess-datasets = "medvqa.scripts.preprocess_datasets:main"
 train-lrcn = "medvqa.scripts.train_lrcn:main"
 evaluate-model = "medvqa.scripts.evaluate_model:main"
-visualize-results = "medvqa.scripts.visualize_results:main"
 

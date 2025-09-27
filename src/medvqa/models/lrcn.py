@@ -40,6 +40,8 @@ class LRCN(nn.Module):
         num_classes: int = 1000,  # Will be set based on answer vocabulary
         # Layer-Residual Mechanism
         use_lrm: bool = ModelConfig.USE_LRM,
+        # Efficiency settings
+        freeze_backbones: bool = True,  # Freeze ViT + BioBERT for faster training
         # Regularization
         dropout: float = 0.1,
     ):
@@ -52,7 +54,7 @@ class LRCN(nn.Module):
         self.visual_encoder_type = visual_encoder_type
         self.text_encoder_type = text_encoder_type
 
-        # Visual encoder (ViT or ViT+Linear)
+        # Visual encoder (ViT or ViT+Linear) - Configurable freezing
         if visual_encoder_type == "vit-linear":
             self.visual_encoder = ViTVisualEncoder(
                 image_size=image_size,
@@ -60,6 +62,7 @@ class LRCN(nn.Module):
                 hidden_dim=hidden_dim,
                 pretrained=vit_pretrained,
                 use_linear_projection=True,
+                freeze_backbone=freeze_backbones,
             )
         else:  # vit
             self.visual_encoder = ViTVisualEncoder(
@@ -67,14 +70,15 @@ class LRCN(nn.Module):
                 patch_size=patch_size,
                 hidden_dim=hidden_dim,
                 pretrained=vit_pretrained,
+                freeze_backbone=freeze_backbones,
             )
 
-        # Text encoder (BioBERT or BioBERT+LSTM)
+        # Text encoder (BioBERT or BioBERT+LSTM) - Configurable freezing
         self.text_encoder = BioBERTTextEncoder(
             model_name=biobert_model,
             hidden_dim=hidden_dim,
             max_length=max_text_length,
-            freeze_bert=freeze_biobert,
+            freeze_bert=freeze_backbones,
             use_lstm=(text_encoder_type == "biobert-lstm"),
         )
 

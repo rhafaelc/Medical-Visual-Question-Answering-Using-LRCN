@@ -74,21 +74,27 @@ class ModelConfig:
     # Weight constant
     DEFAULT_WEIGHT = 1.0
 
-    # Training constants
-    DEFAULT_EPOCHS = 200  # Updated for research configurations
-    DEFAULT_BATCH_SIZE = 64  # Default for dataloaders
-    DEFAULT_TRAINING_BATCH_SIZE = 64  # Updated for research configurations
-    DEFAULT_LEARNING_RATE = 1e-4
-    DEFAULT_NUM_WORKERS = 4
+    # Training constants - Optimized for efficiency
+    DEFAULT_EPOCHS = 100  # Reduced from 200 - still sufficient for convergence
+    DEFAULT_BATCH_SIZE = 32  # Reduced for memory efficiency and faster training
+    DEFAULT_TRAINING_BATCH_SIZE = 32  # Reduced for faster training
+    DEFAULT_LEARNING_RATE = 2e-4  # Slightly higher LR for faster convergence
+    DEFAULT_NUM_WORKERS = 8  # Increased for faster data loading
     DEFAULT_WEIGHT_DECAY = 1e-5
-    DEFAULT_ATTENTION_LAYERS = 8
+    DEFAULT_ATTENTION_LAYERS = 6  # Reduced from 8 - sweet spot for performance/speed
     GRADIENT_CLIP_NORM = 1.0
 
-    # Architecture flags
+    # Architecture flags - Optimized for speed
     USE_LRM = True
     VISUAL_FEATURE_DIM = 768  # ViT base feature dimension
     TEXT_FEATURE_DIM = 768  # BioBERT base feature dimension
     TEXT_ENCODER_NAME = "dmis-lab/biobert-base-cased-v1.1"
+
+    # Efficiency optimizations
+    FREEZE_BACKBONE_EPOCHS = 10  # Freeze pretrained models initially
+    USE_MIXED_PRECISION = True  # Enable FP16 training
+    GRADIENT_CHECKPOINTING = True  # Save memory
+    EFFICIENT_ATTENTION = True  # Use efficient attention implementation
 
     # Overfitting detection thresholds
     HIGH_OVERFITTING_THRESHOLD = 0.1

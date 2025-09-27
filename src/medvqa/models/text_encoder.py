@@ -2,9 +2,14 @@
 
 import torch
 import torch.nn as nn
+import warnings
 from transformers import AutoTokenizer, AutoModel
+from transformers.utils import logging
 
 from ..core.config import ModelConfig
+
+# Suppress transformers warnings for cleaner output
+logging.set_verbosity_warning()
 
 
 class BioBERTTextEncoder(nn.Module):
@@ -31,8 +36,12 @@ class BioBERTTextEncoder(nn.Module):
         self.use_lstm = use_lstm
 
         # Load BioBERT tokenizer and model
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.bert = AutoModel.from_pretrained(model_name)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.bert = AutoModel.from_pretrained(model_name)
+
+        print(f"✅ Loaded BioBERT ({model_name.split('/')[-1]}) pretrained weights")
 
         # Get BERT hidden dimension
         bert_hidden_dim = self.bert.config.hidden_size
@@ -41,6 +50,7 @@ class BioBERTTextEncoder(nn.Module):
         if freeze_bert:
             for param in self.bert.parameters():
                 param.requires_grad = False
+            print(f"❄️ Frozen BioBERT backbone - only projection layers trainable")
 
         # Optional LSTM layer after BioBERT
         if use_lstm:

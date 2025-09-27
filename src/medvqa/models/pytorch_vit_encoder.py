@@ -16,12 +16,10 @@ class PyTorchViTEncoder(nn.Module):
     def __init__(
         self,
         image_size: int = ModelConfig.IMAGE_SIZE,
-        patch_size: int = ModelConfig.PATCH_SIZE,  # Keep for compatibility
         hidden_dim: int = ModelConfig.HIDDEN_DIM,
         pretrained: bool = True,
-        use_linear_projection: bool = False,  # Keep for compatibility
         freeze_backbone: bool = True,
-        variant: str = "b16",  # "b16" (patch 16) or "b32" (patch 32)
+        variant: str = "b32",  # "b16" (patch 16) or "b32" (patch 32)
     ):
         super().__init__()
 

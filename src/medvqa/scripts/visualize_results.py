@@ -20,11 +20,20 @@ def plot_training_curves(history, save_path):
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     fig.suptitle("Medical VQA LRCN Training Results", fontsize=16, fontweight="bold")
 
-    epochs = range(1, len(history["train_loss"]) + 1)
+    # Extract metrics from nested structure
+    train_metrics = history["train"]
+    val_metrics = history["val"]
+
+    epochs = range(1, len(train_metrics) + 1)
 
     # Loss
-    axes[0, 0].plot(epochs, history["train_loss"], label="Train", linewidth=2)
-    axes[0, 0].plot(epochs, history["val_loss"], label="Validation", linewidth=2)
+    train_losses = [epoch["loss"] for epoch in train_metrics]
+    axes[0, 0].plot(epochs, train_losses, label="Train", linewidth=2)
+    if val_metrics:  # Only plot validation if available
+        val_losses = [epoch["loss"] for epoch in val_metrics]
+        axes[0, 0].plot(
+            epochs[: len(val_losses)], val_losses, label="Validation", linewidth=2
+        )
     axes[0, 0].set_title("Loss", fontweight="bold")
     axes[0, 0].set_xlabel("Epoch")
     axes[0, 0].set_ylabel("Loss")
@@ -32,8 +41,16 @@ def plot_training_curves(history, save_path):
     axes[0, 0].grid(True, alpha=0.3)
 
     # Overall Accuracy
-    axes[0, 1].plot(epochs, history["train_accuracy"], label="Train", linewidth=2)
-    axes[0, 1].plot(epochs, history["val_accuracy"], label="Validation", linewidth=2)
+    train_accuracies = [epoch["accuracy"] for epoch in train_metrics]
+    axes[0, 1].plot(epochs, train_accuracies, label="Train", linewidth=2)
+    if val_metrics:  # Only plot validation if available
+        val_accuracies = [epoch["accuracy"] for epoch in val_metrics]
+        axes[0, 1].plot(
+            epochs[: len(val_accuracies)],
+            val_accuracies,
+            label="Validation",
+            linewidth=2,
+        )
     axes[0, 1].set_title("Overall Accuracy", fontweight="bold")
     axes[0, 1].set_xlabel("Epoch")
     axes[0, 1].set_ylabel("Accuracy")
@@ -41,12 +58,16 @@ def plot_training_curves(history, save_path):
     axes[0, 1].grid(True, alpha=0.3)
 
     # Closed-ended Accuracy
-    axes[1, 0].plot(
-        epochs, history["train_closed_accuracy"], label="Train", linewidth=2
-    )
-    axes[1, 0].plot(
-        epochs, history["val_closed_accuracy"], label="Validation", linewidth=2
-    )
+    train_closed_accuracies = [epoch["closed_accuracy"] for epoch in train_metrics]
+    axes[1, 0].plot(epochs, train_closed_accuracies, label="Train", linewidth=2)
+    if val_metrics:
+        val_closed_accuracies = [epoch["closed_accuracy"] for epoch in val_metrics]
+        axes[1, 0].plot(
+            epochs[: len(val_closed_accuracies)],
+            val_closed_accuracies,
+            label="Validation",
+            linewidth=2,
+        )
     axes[1, 0].set_title("Closed-ended Accuracy", fontweight="bold")
     axes[1, 0].set_xlabel("Epoch")
     axes[1, 0].set_ylabel("Accuracy")
@@ -54,10 +75,16 @@ def plot_training_curves(history, save_path):
     axes[1, 0].grid(True, alpha=0.3)
 
     # Open-ended Accuracy
-    axes[1, 1].plot(epochs, history["train_open_accuracy"], label="Train", linewidth=2)
-    axes[1, 1].plot(
-        epochs, history["val_open_accuracy"], label="Validation", linewidth=2
-    )
+    train_open_accuracies = [epoch["open_accuracy"] for epoch in train_metrics]
+    axes[1, 1].plot(epochs, train_open_accuracies, label="Train", linewidth=2)
+    if val_metrics:
+        val_open_accuracies = [epoch["open_accuracy"] for epoch in val_metrics]
+        axes[1, 1].plot(
+            epochs[: len(val_open_accuracies)],
+            val_open_accuracies,
+            label="Validation",
+            linewidth=2,
+        )
     axes[1, 1].set_title("Open-ended Accuracy", fontweight="bold")
     axes[1, 1].set_xlabel("Epoch")
     axes[1, 1].set_ylabel("Accuracy")
@@ -73,17 +100,21 @@ def plot_metrics_summary(final_results, save_path):
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle("Final Model Performance Summary", fontsize=16, fontweight="bold")
 
+    # Extract metrics from nested structure
+    train_metrics = final_results.get("final_train_metrics", {})
+    val_metrics = final_results.get("final_val_metrics", {})
+
     # Accuracy comparison
     categories = ["Overall", "Closed-ended", "Open-ended"]
     train_accs = [
-        final_results["final_train_accuracy"],
-        final_results["final_train_closed_acc"],
-        final_results["final_train_open_acc"],
+        train_metrics.get("accuracy", 0),
+        train_metrics.get("closed_accuracy", 0),
+        train_metrics.get("open_accuracy", 0),
     ]
     val_accs = [
-        final_results["final_val_accuracy"],
-        final_results["final_val_closed_acc"],
-        final_results["final_val_open_acc"],
+        val_metrics.get("accuracy", 0),
+        val_metrics.get("closed_accuracy", 0),
+        val_metrics.get("open_accuracy", 0),
     ]
 
     x = np.arange(len(categories))
@@ -124,12 +155,16 @@ def plot_metrics_summary(final_results, save_path):
         )
 
     # Model statistics
+    training_time_hours = final_results.get("training_time", 0) / 3600
     stats_data = [
-        ["Best Val Accuracy", f"{final_results['best_val_accuracy']:.4f}"],
-        ["Training Time", f"{final_results['training_time_minutes']:.1f} min"],
-        ["Total Parameters", f"{final_results['total_parameters']:,}"],
-        ["Trainable Parameters", f"{final_results['trainable_parameters']:,}"],
-        ["Epochs Completed", f"{final_results['epochs_completed']}"],
+        ["Best Val Accuracy", f"{final_results.get('best_val_accuracy', 0):.4f}"],
+        ["Training Time", f"{training_time_hours:.2f} hours"],
+        ["Final Train Loss", f"{train_metrics.get('loss', 0):.4f}"],
+        ["Final Train Accuracy", f"{train_metrics.get('accuracy', 0):.4f}"],
+        [
+            "Epochs Completed",
+            f"{final_results.get('configuration', {}).get('epochs', 0)}",
+        ],
     ]
 
     axes[1].axis("tight")
@@ -165,6 +200,11 @@ def plot_metrics_summary(final_results, save_path):
 def generate_report(final_results, results_dir):
     report_path = results_dir / "training_report.txt"
 
+    # Extract metrics from nested structure
+    train_metrics = final_results.get("final_train_metrics", {})
+    val_metrics = final_results.get("final_val_metrics", {})
+    config = final_results.get("configuration", {})
+
     with open(report_path, "w") as f:
         f.write("MEDICAL VQA LRCN TRAINING REPORT\n")
         f.write("=" * 50 + "\n\n")
@@ -172,63 +212,68 @@ def generate_report(final_results, results_dir):
         f.write("FINAL PERFORMANCE METRICS:\n")
         f.write("-" * 30 + "\n")
         f.write(
-            f"Best Validation Accuracy:     {final_results['best_val_accuracy']:.4f}\n"
+            f"Best Validation Accuracy:     {final_results.get('best_val_accuracy', 0):.4f}\n"
         )
         f.write(
-            f"Final Train Accuracy:         {final_results['final_train_accuracy']:.4f}\n"
+            f"Final Train Accuracy:         {train_metrics.get('accuracy', 0):.4f}\n"
         )
         f.write(
-            f"Final Validation Accuracy:    {final_results['final_val_accuracy']:.4f}\n\n"
+            f"Final Validation Accuracy:    {val_metrics.get('accuracy', 0):.4f}\n\n"
         )
 
         f.write("ACCURACY BY QUESTION TYPE:\n")
         f.write("-" * 30 + "\n")
         f.write(
-            f"Closed-ended (Train):         {final_results['final_train_closed_acc']:.4f}\n"
+            f"Closed-ended (Train):         {train_metrics.get('closed_accuracy', 0):.4f}\n"
         )
         f.write(
-            f"Closed-ended (Validation):    {final_results['final_val_closed_acc']:.4f}\n"
+            f"Closed-ended (Validation):    {val_metrics.get('closed_accuracy', 0):.4f}\n"
         )
         f.write(
-            f"Open-ended (Train):           {final_results['final_train_open_acc']:.4f}\n"
+            f"Open-ended (Train):           {train_metrics.get('open_accuracy', 0):.4f}\n"
         )
         f.write(
-            f"Open-ended (Validation):      {final_results['final_val_open_acc']:.4f}\n\n"
+            f"Open-ended (Validation):      {val_metrics.get('open_accuracy', 0):.4f}\n\n"
         )
 
+        training_time_hours = final_results.get("training_time", 0) / 3600
         f.write("TRAINING DETAILS:\n")
         f.write("-" * 30 + "\n")
+        f.write(f"Total Training Time:          {training_time_hours:.2f} hours\n")
+        f.write(f"Epochs Completed:             {config.get('epochs', 0)}\n")
+        f.write(f"Dataset:                      {config.get('dataset', 'unknown')}\n")
         f.write(
-            f"Total Training Time:          {final_results['training_time_minutes']:.1f} minutes\n"
+            f"Batch Size:                   {config.get('batch_size', 'unknown')}\n"
         )
-        f.write(f"Epochs Completed:             {final_results['epochs_completed']}\n")
         f.write(
-            f"Total Parameters:             {final_results['total_parameters']:,}\n"
-        )
-        f.write(
-            f"Trainable Parameters:         {final_results['trainable_parameters']:,}\n\n"
+            f"Learning Rate:                {config.get('learning_rate', 'unknown')}\n\n"
         )
 
-        overfitting_indicator = (
-            final_results["final_train_accuracy"] - final_results["final_val_accuracy"]
-        )
+        train_acc = train_metrics.get("accuracy", 0)
+        val_acc = val_metrics.get("accuracy", 0)
+        overfitting_indicator = train_acc - val_acc
+
         f.write("ANALYSIS:\n")
         f.write("-" * 30 + "\n")
-        if overfitting_indicator > ModelConfig.HIGH_OVERFITTING_THRESHOLD:
+        if overfitting_indicator > 0.15:  # High threshold
             f.write(
-                f"⚠️  High overfitting detected (train-val gap > {ModelConfig.HIGH_OVERFITTING_THRESHOLD})\n"
+                f"⚠️  High overfitting detected (train-val gap: {overfitting_indicator:.4f})\n"
             )
-        elif overfitting_indicator > ModelConfig.MODERATE_OVERFITTING_THRESHOLD:
+        elif overfitting_indicator > 0.05:  # Moderate threshold
             f.write(
-                f"⚡ Moderate overfitting detected (train-val gap > {ModelConfig.MODERATE_OVERFITTING_THRESHOLD})\n"
+                f"⚡ Moderate overfitting detected (train-val gap: {overfitting_indicator:.4f})\n"
             )
         else:
             f.write("✅ Good generalization (low train-val gap)\n")
 
-        if final_results["final_val_closed_acc"] > final_results["final_val_open_acc"]:
+        val_closed_acc = val_metrics.get("closed_accuracy", 0)
+        val_open_acc = val_metrics.get("open_accuracy", 0)
+        if val_closed_acc > val_open_acc:
             f.write("📊 Model performs better on closed-ended questions\n")
-        else:
+        elif val_open_acc > val_closed_acc:
             f.write("📝 Model performs better on open-ended questions\n")
+        else:
+            f.write("⚖️ Similar performance on both question types\n")
 
     print(f"Training report saved to: {report_path}")
 
