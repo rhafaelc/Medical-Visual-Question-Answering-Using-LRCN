@@ -135,10 +135,7 @@ class MedVQADataset(Dataset):
         try:
             image = self.image_processor.preprocess(entry["image"])
         except Exception as e:
-            print(f"Warning: Failed to load image {entry['image']}: {e}")
-            image = torch.randn(
-                3, self.image_config["image_size"], self.image_config["image_size"]
-            ).clamp(0, 1)
+            raise RuntimeError(f"Failed to load image {entry['image']}: {e}") from e
 
         # Process question
         question_indices = self.question_processor.encode(entry["question"])

@@ -61,8 +61,8 @@ class MedVQADataset(Dataset):
 
         try:
             image = self.image_processor.load_and_preprocess(item["image"])
-        except Exception:
-            image = torch.randn(3, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load image {item['image']}: {e}") from e
 
         # Pass raw question string to model
         question = item["question"]

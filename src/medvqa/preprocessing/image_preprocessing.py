@@ -26,7 +26,9 @@ class ImagePreprocessor:
             normalize_range: Normalization range (0,1)
         """
         self.image_size = image_size
-        self.apply_contrast_stretching = apply_contrast_stretching
+        self.enable_contrast_stretching = (
+            apply_contrast_stretching  # Renamed to avoid collision
+        )
         self.normalize_range = normalize_range
 
         self.transforms = transforms.Compose(
@@ -89,7 +91,7 @@ class ImagePreprocessor:
             image = image.convert("RGB")
 
         # Apply contrast stretching for medical images
-        if self.apply_contrast_stretching:
+        if self.enable_contrast_stretching:
             image = self.apply_contrast_stretching(image)
 
         # Apply transforms (resize only, no augmentation)
@@ -107,7 +109,7 @@ class ImagePreprocessor:
                 transforms.Lambda(
                     lambda img: (
                         self.apply_contrast_stretching(img)
-                        if self.apply_contrast_stretching
+                        if self.enable_contrast_stretching
                         else img
                     )
                 ),
@@ -129,15 +131,7 @@ class ImagePreprocessor:
             FileNotFoundError: If image file doesn't exist
             ValueError: If image cannot be loaded or processed
         """
-        try:
-            return self.preprocess(image_path)
-        except Exception as e:
-            # Graceful fallback for missing images (return random tensor)
-            print(f"Warning: Failed to load image {image_path}: {e}")
-            print(
-                f"Returning random tensor of size ({3}, {self.image_size}, {self.image_size})"
-            )
-            return torch.randn(3, self.image_size, self.image_size).clamp(0, 1)
+        return self.preprocess(image_path)
 
 
 class MedicalImageNormalizer:
