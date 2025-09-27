@@ -75,12 +75,20 @@ class ModelConfig:
     DEFAULT_WEIGHT = 1.0
 
     # Training constants
-    DEFAULT_EPOCHS = 15
+    DEFAULT_EPOCHS = 200  # Updated for research configurations
     DEFAULT_BATCH_SIZE = 64  # Default for dataloaders
-    DEFAULT_TRAINING_BATCH_SIZE = 16  # Default for training CLI
+    DEFAULT_TRAINING_BATCH_SIZE = 64  # Updated for research configurations
     DEFAULT_LEARNING_RATE = 1e-4
     DEFAULT_NUM_WORKERS = 4
+    DEFAULT_WEIGHT_DECAY = 1e-5
+    DEFAULT_ATTENTION_LAYERS = 8
     GRADIENT_CLIP_NORM = 1.0
+
+    # Architecture flags
+    USE_LRM = True
+    VISUAL_FEATURE_DIM = 768  # ViT base feature dimension
+    TEXT_FEATURE_DIM = 768  # BioBERT base feature dimension
+    TEXT_ENCODER_NAME = "dmis-lab/biobert-base-cased-v1.1"
 
     # Overfitting detection thresholds
     HIGH_OVERFITTING_THRESHOLD = 0.1

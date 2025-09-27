@@ -24,20 +24,22 @@ class LRCN(nn.Module):
         self,
         # Model architecture
         hidden_dim: int = ModelConfig.HIDDEN_DIM,
-        num_attention_layers: int = 6,
+        num_attention_layers: int = ModelConfig.DEFAULT_ATTENTION_LAYERS,
         num_heads: int = ModelConfig.ATTENTION_HEADS,
         # Visual encoder
         image_size: int = ModelConfig.IMAGE_SIZE,
         patch_size: int = ModelConfig.PATCH_SIZE,
         vit_pretrained: bool = True,
+        visual_encoder_type: str = "vit",  # "vit" or "vit-linear"
         # Text encoder
-        biobert_model: str = "dmis-lab/biobert-base-cased-v1.1",
+        biobert_model: str = ModelConfig.TEXT_ENCODER_NAME,
         max_text_length: int = ModelConfig.MAX_TEXT_LENGTH,
         freeze_biobert: bool = False,
+        text_encoder_type: str = "biobert",  # "biobert" or "biobert-lstm"
         # Answer vocabulary
         num_classes: int = 1000,  # Will be set based on answer vocabulary
         # Layer-Residual Mechanism
-        use_lrm: bool = True,
+        use_lrm: bool = ModelConfig.USE_LRM,
         # Regularization
         dropout: float = 0.1,
     ):
@@ -47,21 +49,33 @@ class LRCN(nn.Module):
         self.num_attention_layers = num_attention_layers
         self.num_classes = num_classes
         self.use_lrm = use_lrm
+        self.visual_encoder_type = visual_encoder_type
+        self.text_encoder_type = text_encoder_type
 
-        # Visual encoder (ViT)
-        self.visual_encoder = ViTVisualEncoder(
-            image_size=image_size,
-            patch_size=patch_size,
-            hidden_dim=hidden_dim,
-            pretrained=vit_pretrained,
-        )
+        # Visual encoder (ViT or ViT+Linear)
+        if visual_encoder_type == "vit-linear":
+            self.visual_encoder = ViTVisualEncoder(
+                image_size=image_size,
+                patch_size=patch_size,
+                hidden_dim=hidden_dim,
+                pretrained=vit_pretrained,
+                use_linear_projection=True,
+            )
+        else:  # vit
+            self.visual_encoder = ViTVisualEncoder(
+                image_size=image_size,
+                patch_size=patch_size,
+                hidden_dim=hidden_dim,
+                pretrained=vit_pretrained,
+            )
 
-        # Text encoder (BioBERT)
+        # Text encoder (BioBERT or BioBERT+LSTM)
         self.text_encoder = BioBERTTextEncoder(
             model_name=biobert_model,
             hidden_dim=hidden_dim,
             max_length=max_text_length,
             freeze_bert=freeze_biobert,
+            use_lstm=(text_encoder_type == "biobert-lstm"),
         )
 
         # Layer-Residual Co-Attention Mechanism
@@ -127,6 +141,7 @@ class LRCN(nn.Module):
 
         # Encode text features
         if isinstance(questions, list):
+            # String input - use BioBERT directly
             text_outputs = self.text_encoder(questions)
             text_features = text_outputs[
                 "sequence"

@@ -49,7 +49,9 @@ class SlakeLoader(BaseDatasetLoader):
                     "id": self._create_entry_id(split, idx),
                     "dataset": self.dataset_name,
                     "split": split,
-                    "image": str(self.images_dir / image_name),
+                    "image": str(
+                        self.images_dir / "imgs" / image_name
+                    ),  # Fixed: Add imgs subfolder
                     "question": question,
                     "answer": answer,
                     "answer_type": answer_type,

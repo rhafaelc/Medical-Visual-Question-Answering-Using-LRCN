@@ -16,16 +16,19 @@ class BioBERTTextEncoder(nn.Module):
 
     def __init__(
         self,
-        model_name: str = "dmis-lab/biobert-base-cased-v1.1",
+        model_name: str = ModelConfig.TEXT_ENCODER_NAME,
         hidden_dim: int = ModelConfig.HIDDEN_DIM,
         max_length: int = ModelConfig.MAX_TEXT_LENGTH,
         freeze_bert: bool = False,
+        use_lstm: bool = False,
+        lstm_layers: int = 2,
     ):
         super().__init__()
 
         self.model_name = model_name
         self.hidden_dim = hidden_dim
         self.max_length = max_length
+        self.use_lstm = use_lstm
 
         # Load BioBERT tokenizer and model
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -39,9 +42,24 @@ class BioBERTTextEncoder(nn.Module):
             for param in self.bert.parameters():
                 param.requires_grad = False
 
+        # Optional LSTM layer after BioBERT
+        if use_lstm:
+            self.lstm = nn.LSTM(
+                input_size=bert_hidden_dim,
+                hidden_size=hidden_dim // 2,  # Bidirectional LSTM
+                num_layers=lstm_layers,
+                batch_first=True,
+                bidirectional=True,
+                dropout=0.1 if lstm_layers > 1 else 0,
+            )
+            lstm_output_dim = hidden_dim
+        else:
+            self.lstm = None
+            lstm_output_dim = bert_hidden_dim
+
         # Projection layer to match LRCN hidden dimension
-        if bert_hidden_dim != hidden_dim:
-            self.projection = nn.Linear(bert_hidden_dim, hidden_dim)
+        if lstm_output_dim != hidden_dim:
+            self.projection = nn.Linear(lstm_output_dim, hidden_dim)
         else:
             self.projection = nn.Identity()
 
@@ -89,9 +107,27 @@ class BioBERTTextEncoder(nn.Module):
         )  # [batch_size, seq_len, bert_hidden]
         pooled_output = outputs.pooler_output  # [batch_size, bert_hidden]
 
+        # Optional LSTM processing
+        if self.lstm is not None:
+            # Pass sequence through LSTM
+            lstm_output, _ = self.lstm(
+                sequence_output
+            )  # [batch_size, seq_len, hidden_dim]
+            sequence_features = lstm_output
+            # Use mean pooling for sentence-level representation
+            mask_expanded = (
+                attention_mask.unsqueeze(-1).expand(sequence_features.size()).float()
+            )
+            sum_embeddings = torch.sum(sequence_features * mask_expanded, 1)
+            sum_mask = torch.clamp(mask_expanded.sum(1), min=1e-9)
+            pooled_features = sum_embeddings / sum_mask
+        else:
+            sequence_features = sequence_output
+            pooled_features = pooled_output
+
         # Project to target dimension
-        sequence_features = self.projection(sequence_output)
-        pooled_features = self.projection(pooled_output)
+        sequence_features = self.projection(sequence_features)
+        pooled_features = self.projection(pooled_features)
 
         # Apply layer normalization and dropout
         sequence_features = self.layer_norm(sequence_features)

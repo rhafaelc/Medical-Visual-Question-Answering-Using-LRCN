@@ -52,6 +52,14 @@ class MultiHeadAttention(nn.Module):
         Returns:
             Tuple of (output, attention_weights)
         """
+        # Handle 2D tensors by adding sequence dimension
+        if query.dim() == 2:
+            query = query.unsqueeze(1)  # [batch_size, 1, hidden_dim]
+        if key.dim() == 2:
+            key = key.unsqueeze(1)
+        if value.dim() == 2:
+            value = value.unsqueeze(1)
+
         batch_size, seq_len_q, _ = query.shape
         seq_len_k = key.shape[1]
 

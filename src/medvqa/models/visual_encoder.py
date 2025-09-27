@@ -22,12 +22,14 @@ class ViTVisualEncoder(nn.Module):
         num_layers: int = 12,
         num_heads: int = ModelConfig.ATTENTION_HEADS,
         pretrained: bool = True,
+        use_linear_projection: bool = False,
     ):
         super().__init__()
 
         self.image_size = image_size
         self.patch_size = patch_size
         self.hidden_dim = hidden_dim
+        self.use_linear_projection = use_linear_projection
 
         if pretrained:
             # Use pre-trained ViT-Base
@@ -47,7 +49,7 @@ class ViTVisualEncoder(nn.Module):
             vit_hidden_dim = hidden_dim
 
         # Projection layer to match LRCN hidden dimension
-        if vit_hidden_dim != hidden_dim:
+        if vit_hidden_dim != hidden_dim or use_linear_projection:
             self.projection = nn.Linear(vit_hidden_dim, hidden_dim)
         else:
             self.projection = nn.Identity()
