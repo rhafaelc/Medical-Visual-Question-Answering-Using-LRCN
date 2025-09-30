@@ -280,23 +280,13 @@ def main():
         help="Directory to save results",
     )
     parser.add_argument("--device", type=str, default="auto", help="Device to use")
+    parser.add_argument(
+        "--save-model",
+        action="store_true",
+        help="Save the trained model",
+    )
 
-    # Advanced training configuration
-    parser.add_argument(
-        "--warmup-epochs", type=int, default=3, help="Number of warmup epochs"
-    )
-    parser.add_argument(
-        "--decay-epochs",
-        type=int,
-        default=20,
-        help="Decay learning rate every N epochs",
-    )
-    parser.add_argument(
-        "--early-stopping",
-        type=int,
-        default=10,
-        help="Early stopping patience (epochs without improvement)",
-    )
+    # Advanced training configuration (with defaults from ModelConfig)
     parser.add_argument(
         "--attention-heads", type=int, default=8, help="Number of attention heads (h)"
     )
@@ -367,9 +357,7 @@ def main():
         else:
             all_data = list(load_vqa_rad())
 
-        if args.subset:
-            all_data = all_data[: args.subset]
-            print(f"Using subset of {len(all_data)} samples")
+        print(f"Using {args.dataset} dataset with {len(all_data)} samples")
 
         # Split data
         train_data = [item for item in all_data if item["split"] == "train"]
