@@ -229,54 +229,107 @@ def validate_epoch(model, dataloader, criterion, device):
 def main():
     """Main training function."""
     parser = argparse.ArgumentParser(description="Train Medical VQA LRCN model")
-    parser.add_argument(
-        "--epochs",
-        type=int,
-        default=ModelConfig.DEFAULT_EPOCHS,
-        help="Number of training epochs",
-    )
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=ModelConfig.DEFAULT_TRAINING_BATCH_SIZE,
-        help="Batch size",
-    )
-    parser.add_argument(
-        "--lr",
-        type=float,
-        default=ModelConfig.DEFAULT_LEARNING_RATE,
-        help="Learning rate",
-    )
-    parser.add_argument("--save-model", action="store_true", help="Save trained model")
-    parser.add_argument(
-        "--results-dir", type=str, default="results", help="Results directory"
-    )
-    parser.add_argument(
-        "--subset", type=int, help="Use subset of data for faster training"
-    )
 
-    # Research configuration flags
+    # Required research parameters
     parser.add_argument(
         "--dataset",
         type=str,
         choices=["slake", "vqa-rad"],
-        default="slake",
+        required=True,
         help="Dataset to use for training",
     )
     parser.add_argument(
         "--attention-layers",
         type=int,
         choices=[4, 6, 8, 10, 12],
-        default=ModelConfig.DEFAULT_ATTENTION_LAYERS,
-        help="Number of attention layers (L)",
+        required=True,
+        help="Number of attention layers (research parameter)",
     )
     parser.add_argument(
-        "--use-lrm", action="store_true", help="Enable Layer-Residual Mechanism"
+        "--use-lrm", action="store_true", help="Use Layer-Residual Mechanism"
     )
     parser.add_argument(
-        "--no-lrm", action="store_true", help="Disable Layer-Residual Mechanism"
+        "--no-lrm",
+        action="store_true",
+        help="Disable Layer-Residual Mechanism (for ablation)",
+    )
+    parser.add_argument("--lr", type=float, required=True, help="Learning rate")
+    parser.add_argument(
+        "--warmup-epochs", type=int, required=True, help="Number of warmup epochs"
+    )
+    parser.add_argument(
+        "--decay-epochs",
+        type=int,
+        required=True,
+        help="Decay learning rate every N epochs",
+    )
+    parser.add_argument("--batch-size", type=int, required=True, help="Batch size")
+    parser.add_argument("--epochs", type=int, required=True, help="Number of epochs")
+    parser.add_argument(
+        "--early-stopping",
+        type=int,
+        required=True,
+        help="Early stopping patience (epochs without improvement)",
+    )
+
+    # Optional parameters
+    parser.add_argument(
+        "--results-dir",
+        type=str,
+        default="results",
+        help="Directory to save results",
     )
     parser.add_argument("--device", type=str, default="auto", help="Device to use")
+
+    # Advanced training configuration
+    parser.add_argument(
+        "--warmup-epochs", type=int, default=3, help="Number of warmup epochs"
+    )
+    parser.add_argument(
+        "--decay-epochs",
+        type=int,
+        default=20,
+        help="Decay learning rate every N epochs",
+    )
+    parser.add_argument(
+        "--early-stopping",
+        type=int,
+        default=10,
+        help="Early stopping patience (epochs without improvement)",
+    )
+    parser.add_argument(
+        "--attention-heads", type=int, default=8, help="Number of attention heads (h)"
+    )
+    parser.add_argument(
+        "--hidden-dim", type=int, default=512, help="Hidden dimension (d)"
+    )
+    parser.add_argument(
+        "--feedforward-dim", type=int, default=2048, help="Feed-forward dimension (dff)"
+    )
+    parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate")
+    parser.add_argument(
+        "--coverage-percentile",
+        type=float,
+        default=95.0,
+        help="Percentile for L_max and top-K answer selection",
+    )
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        choices=["adam", "adamw", "sgd"],
+        default="adam",
+        help="Optimizer type",
+    )
+    parser.add_argument(
+        "--weight-decay", type=float, default=0.01, help="Weight decay for optimizer"
+    )
+    parser.add_argument(
+        "--loss-function",
+        type=str,
+        choices=["bce", "ce", "focal"],
+        default="bce",
+        help="Loss function (Binary Cross-Entropy, Cross-Entropy, Focal)",
+    )
 
     args = parser.parse_args()
 
@@ -382,6 +435,9 @@ def main():
             num_classes=len(answer_processor.answer_vocab),
             hidden_dim=ModelConfig.HIDDEN_DIM,
             num_attention_layers=args.attention_layers,
+            num_heads=ModelConfig.ATTENTION_HEADS,
+            feedforward_dim=ModelConfig.HIDDEN_DIM * 4,
+            dropout=0.1,
             use_lrm=use_lrm,
             visual_encoder_type="vit",
             text_encoder_type="biobert",
@@ -393,15 +449,54 @@ def main():
         )
 
         # Initialize training components
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+        if args.loss_function == "bce":
+            criterion = nn.BCEWithLogitsLoss()
+        elif args.loss_function == "ce":
+            criterion = nn.CrossEntropyLoss()
+        elif args.loss_function == "focal":
+            # Simple focal loss implementation
+            criterion = nn.CrossEntropyLoss()
+
+        # Configure optimizer
+        if args.optimizer == "adam":
+            optimizer = optim.Adam(
+                model.parameters(), lr=args.lr, weight_decay=args.weight_decay
+            )
+        elif args.optimizer == "adamw":
+            optimizer = optim.AdamW(
+                model.parameters(), lr=args.lr, weight_decay=args.weight_decay
+            )
+        elif args.optimizer == "sgd":
+            optimizer = optim.SGD(
+                model.parameters(),
+                lr=args.lr,
+                weight_decay=args.weight_decay,
+                momentum=0.9,
+            )
+
+        # Learning rate scheduler with warmup
+        def warmup_schedule(epoch):
+            if epoch < args.warmup_epochs:
+                return (epoch + 1) / args.warmup_epochs
+            else:
+                # Decay every decay_epochs
+                decay_factor = 0.1 ** (
+                    (epoch - args.warmup_epochs) // args.decay_epochs
+                )
+                return decay_factor
+
+        scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warmup_schedule)
+
+        # Create results directory
+        results_dir = Path(args.results_dir)
+        results_dir.mkdir(exist_ok=True)
 
         # Training loop
         print("Starting training...")
         start_time = time.time()
 
         best_val_acc = 0.0
+        epochs_without_improvement = 0
         history = {"train": [], "val": []}
 
         for epoch in range(args.epochs):
@@ -432,14 +527,35 @@ def main():
                     f"Open: {val_metrics['open_accuracy']:.4f}"
                 )
 
+                # Early stopping logic
                 if val_metrics["accuracy"] > best_val_acc:
                     best_val_acc = val_metrics["accuracy"]
+                    epochs_without_improvement = 0
+                    # Save best model
+                    best_model_path = results_dir / "best_model.pth"
+                    torch.save(
+                        {
+                            "epoch": epoch,
+                            "model_state_dict": model.state_dict(),
+                            "optimizer_state_dict": optimizer.state_dict(),
+                            "best_val_acc": best_val_acc,
+                            "args": vars(args),
+                        },
+                        best_model_path,
+                    )
+                    print(f"New best model saved! Val Acc: {best_val_acc:.4f}")
+                else:
+                    epochs_without_improvement += 1
+
+                # Check early stopping
+                if epochs_without_improvement >= args.early_stopping:
+                    print(
+                        f"\nEarly stopping triggered after {epochs_without_improvement} epochs without improvement"
+                    )
+                    print(f"Best validation accuracy: {best_val_acc:.4f}")
+                    break
 
         total_time = time.time() - start_time
-
-        # Save results
-        results_dir = Path(args.results_dir)
-        results_dir.mkdir(exist_ok=True)
 
         # Final results
         final_results = {
@@ -450,6 +566,9 @@ def main():
                 "epochs": args.epochs,
                 "batch_size": args.batch_size,
                 "learning_rate": args.lr,
+                "warmup_epochs": args.warmup_epochs,
+                "decay_epochs": args.decay_epochs,
+                "early_stopping": args.early_stopping,
             },
             "final_train_metrics": history["train"][-1] if history["train"] else {},
             "final_val_metrics": history["val"][-1] if history["val"] else {},
@@ -461,8 +580,11 @@ def main():
         if args.save_model:
             model_config = {
                 "num_classes": len(answer_processor.answer_vocab),
-                "hidden_dim": ModelConfig.HIDDEN_DIM,
+                "hidden_dim": args.hidden_dim,
                 "num_attention_layers": args.attention_layers,
+                "num_heads": args.attention_heads,
+                "feedforward_dim": args.feedforward_dim,
+                "dropout": args.dropout,
                 "use_lrm": use_lrm,
                 "visual_encoder_type": "vit",
                 "text_encoder_type": "biobert",

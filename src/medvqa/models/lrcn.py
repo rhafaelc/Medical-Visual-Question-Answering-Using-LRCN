@@ -26,6 +26,7 @@ class LRCN(nn.Module):
         hidden_dim: int = ModelConfig.HIDDEN_DIM,
         num_attention_layers: int = ModelConfig.DEFAULT_ATTENTION_LAYERS,
         num_heads: int = ModelConfig.ATTENTION_HEADS,
+        feedforward_dim: int = None,
         # Visual encoder
         image_size: int = ModelConfig.IMAGE_SIZE,
         patch_size: int = ModelConfig.PATCH_SIZE,
@@ -87,6 +88,7 @@ class LRCN(nn.Module):
             num_layers=num_attention_layers,
             hidden_dim=hidden_dim,
             num_heads=num_heads,
+            feedforward_dim=feedforward_dim,
             dropout=dropout,
             use_lrm=use_lrm,
         )

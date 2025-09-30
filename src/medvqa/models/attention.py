@@ -112,21 +112,24 @@ class SelfAttentionBlock(nn.Module):
         self,
         hidden_dim: int = ModelConfig.HIDDEN_DIM,
         num_heads: int = ModelConfig.ATTENTION_HEADS,
+        feedforward_dim: int = None,
         dropout: float = 0.1,
     ):
         super().__init__()
 
         self.hidden_dim = hidden_dim
+        if feedforward_dim is None:
+            feedforward_dim = hidden_dim * 4
 
         # Multi-head self-attention
         self.self_attention = MultiHeadAttention(hidden_dim, num_heads, dropout)
 
         # Feed-forward network
         self.ffn = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim * 4),
+            nn.Linear(hidden_dim, feedforward_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.Linear(feedforward_dim, hidden_dim),
             nn.Dropout(dropout),
         )
 
@@ -166,21 +169,24 @@ class GuidedAttentionBlock(nn.Module):
         self,
         hidden_dim: int = ModelConfig.HIDDEN_DIM,
         num_heads: int = ModelConfig.ATTENTION_HEADS,
+        feedforward_dim: int = None,
         dropout: float = 0.1,
     ):
         super().__init__()
 
         self.hidden_dim = hidden_dim
+        if feedforward_dim is None:
+            feedforward_dim = hidden_dim * 4
 
         # Cross-attention (visual attends to text)
         self.cross_attention = MultiHeadAttention(hidden_dim, num_heads, dropout)
 
         # Feed-forward network
         self.ffn = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim * 4),
+            nn.Linear(hidden_dim, feedforward_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim * 4, hidden_dim),
+            nn.Linear(feedforward_dim, hidden_dim),
             nn.Dropout(dropout),
         )
 
@@ -232,6 +238,7 @@ class LayerResidualMechanism(nn.Module):
         num_layers: int = 6,
         hidden_dim: int = ModelConfig.HIDDEN_DIM,
         num_heads: int = ModelConfig.ATTENTION_HEADS,
+        feedforward_dim: int = None,
         dropout: float = 0.1,
         use_lrm: bool = True,
     ):
@@ -241,10 +248,13 @@ class LayerResidualMechanism(nn.Module):
         self.hidden_dim = hidden_dim
         self.use_lrm = use_lrm
 
+        if feedforward_dim is None:
+            feedforward_dim = hidden_dim * 4
+
         # Self-attention layers for text
         self.text_sa_layers = nn.ModuleList(
             [
-                SelfAttentionBlock(hidden_dim, num_heads, dropout)
+                SelfAttentionBlock(hidden_dim, num_heads, feedforward_dim, dropout)
                 for _ in range(num_layers)
             ]
         )
@@ -252,14 +262,14 @@ class LayerResidualMechanism(nn.Module):
         # Self-attention + Guided-attention layers for visual
         self.visual_sa_layers = nn.ModuleList(
             [
-                SelfAttentionBlock(hidden_dim, num_heads, dropout)
+                SelfAttentionBlock(hidden_dim, num_heads, feedforward_dim, dropout)
                 for _ in range(num_layers)
             ]
         )
 
         self.visual_ga_layers = nn.ModuleList(
             [
-                GuidedAttentionBlock(hidden_dim, num_heads, dropout)
+                GuidedAttentionBlock(hidden_dim, num_heads, feedforward_dim, dropout)
                 for _ in range(num_layers)
             ]
         )
