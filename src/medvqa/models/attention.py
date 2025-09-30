@@ -60,8 +60,10 @@ class MultiHeadAttention(nn.Module):
         if value.dim() == 2:
             value = value.unsqueeze(1)
 
-        batch_size, seq_len_q, _ = query.shape
-        seq_len_k = key.shape[1]
+        # Get actual dimensions from tensors (handles DataParallel batch splitting)
+        batch_size = query.size(0)
+        seq_len_q = query.size(1)
+        seq_len_k = key.size(1)
 
         # Project to Q, K, V
         Q = self.q_proj(query)  # [batch_size, seq_len_q, hidden_dim]
