@@ -313,13 +313,6 @@ def main():
     parser.add_argument(
         "--weight-decay", type=float, default=0.01, help="Weight decay for optimizer"
     )
-    parser.add_argument(
-        "--loss-function",
-        type=str,
-        choices=["bce", "ce", "focal"],
-        default="bce",
-        help="Loss function (Binary Cross-Entropy, Cross-Entropy, Focal)",
-    )
 
     args = parser.parse_args()
 
@@ -436,14 +429,8 @@ def main():
             f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}"
         )
 
-        # Initialize training components
-        if args.loss_function == "bce":
-            criterion = nn.BCEWithLogitsLoss()
-        elif args.loss_function == "ce":
-            criterion = nn.CrossEntropyLoss()
-        elif args.loss_function == "focal":
-            # Simple focal loss implementation
-            criterion = nn.CrossEntropyLoss()
+        # Initialize training components with Cross-Entropy Loss
+        criterion = nn.CrossEntropyLoss()
 
         # Configure optimizer
         if args.optimizer == "adam":
