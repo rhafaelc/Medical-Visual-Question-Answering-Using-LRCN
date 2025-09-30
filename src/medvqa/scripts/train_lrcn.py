@@ -429,6 +429,18 @@ def main():
             f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}"
         )
 
+        # Multi-GPU setup for DataParallel
+        if torch.cuda.device_count() > 1:
+            print(f"Using {torch.cuda.device_count()} GPUs with DataParallel")
+            model = nn.DataParallel(model)
+            # Adjust batch size for multi-GPU
+            effective_batch_size = args.batch_size * torch.cuda.device_count()
+            print(
+                f"Effective batch size: {effective_batch_size} (per-GPU: {args.batch_size})"
+            )
+        else:
+            print("Using single GPU")
+
         # Initialize training components with Cross-Entropy Loss
         criterion = nn.CrossEntropyLoss()
 
