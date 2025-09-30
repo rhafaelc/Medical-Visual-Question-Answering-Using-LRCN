@@ -100,8 +100,8 @@ class BioBERTTextEncoder(nn.Module):
             return_tensors="pt",
         )
 
-        # DataParallel handles device placement - get device from model
-        device = next(self.parameters()).device
+        # Get device from BERT model (works with frozen models and DataParallel)
+        device = self.bert.embeddings.word_embeddings.weight.device
 
         # Move tensors to device
         input_ids = encoding["input_ids"].to(device)
