@@ -100,9 +100,8 @@ class BioBERTTextEncoder(nn.Module):
             return_tensors="pt",
         )
 
-        # Move to device
-        input_ids = encoding["input_ids"].to(next(self.parameters()).device)
-        attention_mask = encoding["attention_mask"].to(next(self.parameters()).device)
+        input_ids = encoding["input_ids"]
+        attention_mask = encoding["attention_mask"]
 
         # Encode with BioBERT
         outputs = self.bert(

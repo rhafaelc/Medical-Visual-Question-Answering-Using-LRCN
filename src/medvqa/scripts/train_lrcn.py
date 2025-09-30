@@ -126,9 +126,9 @@ def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None)
     progress_bar = tqdm(dataloader, desc="Training")
 
     for batch in progress_bar:
-        images = batch["images"].to(device)
+        images = batch["images"]
         questions = batch["questions"]  # Keep as list of strings
-        answers = batch["answers"].to(device)
+        answers = batch["answers"]
         answer_types = batch["answer_types"]
 
         optimizer.zero_grad()
@@ -186,9 +186,10 @@ def validate_epoch(model, dataloader, criterion, device):
         progress_bar = tqdm(dataloader, desc="Validation")
 
         for batch in progress_bar:
-            images = batch["images"].to(device)
+            # DataParallel handles device placement automatically
+            images = batch["images"]
             questions = batch["questions"]  # Keep as list of strings
-            answers = batch["answers"].to(device)
+            answers = batch["answers"]
             answer_types = batch["answer_types"]
 
             outputs = model(images, questions)
@@ -422,14 +423,9 @@ def main():
             use_lrm=use_lrm,
             visual_encoder_type="vit",
             text_encoder_type="biobert",
-        ).to(device)
-
-        print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
-        print(
-            f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}"
         )
 
-        # Multi-GPU setup for DataParallel
+        # Multi-GPU setup for DataParallel (PyTorch official pattern)
         if torch.cuda.device_count() > 1:
             print(f"Using {torch.cuda.device_count()} GPUs with DataParallel")
             model = nn.DataParallel(model)
@@ -440,6 +436,8 @@ def main():
             )
         else:
             print("Using single GPU")
+
+        model.to(device)
 
         # Initialize training components with Cross-Entropy Loss
         criterion = nn.CrossEntropyLoss()
