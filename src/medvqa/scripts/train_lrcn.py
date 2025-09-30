@@ -2,9 +2,13 @@
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
+
+# Force using only first GPU to avoid DataParallel issues
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 # Import required modules at top level
 try:
@@ -327,9 +331,14 @@ def main():
     else:
         use_lrm = ModelConfig.USE_LRM
 
-    # Device setup
+    # Device setup - Force single GPU (T4)
     if args.device == "auto":
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            device = torch.device("cuda:0")  # Use only first GPU
+            print(f"🎯 Using single GPU: {torch.cuda.get_device_name(0)}")
+        else:
+            device = torch.device("cpu")
+            print("⚠️  No GPU available, using CPU")
     else:
         device = torch.device(args.device)
 
