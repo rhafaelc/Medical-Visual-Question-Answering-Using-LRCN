@@ -8,105 +8,6 @@ from typing import Optional, Tuple
 from ..core.config import ModelConfig
 
 
-class MultiHeadAttention(nn.Module):
-    """Multi-head attention mechanism."""
-
-    def __init__(
-        self,
-        hidden_dim: int = ModelConfig.HIDDEN_DIM,
-        num_heads: int = ModelConfig.ATTENTION_HEADS,
-        dropout: float = 0.1,
-    ):
-        super().__init__()
-
-        assert hidden_dim % num_heads == 0, "hidden_dim must be divisible by num_heads"
-
-        self.hidden_dim = hidden_dim
-        self.num_heads = num_heads
-        self.head_dim = hidden_dim // num_heads
-        self.scale = self.head_dim**-0.5
-
-        # Linear projections for Q, K, V
-        self.q_proj = nn.Linear(hidden_dim, hidden_dim)
-        self.k_proj = nn.Linear(hidden_dim, hidden_dim)
-        self.v_proj = nn.Linear(hidden_dim, hidden_dim)
-        self.out_proj = nn.Linear(hidden_dim, hidden_dim)
-
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(
-        self,
-        query: torch.Tensor,
-        key: torch.Tensor,
-        value: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Apply multi-head attention.
-
-        Args:
-            query: Query tensor [batch_size, seq_len_q, hidden_dim]
-            key: Key tensor [batch_size, seq_len_k, hidden_dim]
-            value: Value tensor [batch_size, seq_len_v, hidden_dim]
-            attention_mask: Optional mask [batch_size, seq_len_k]
-
-        Returns:
-            Tuple of (output, attention_weights)
-        """
-        # Handle 2D tensors by adding sequence dimension
-        if query.dim() == 2:
-            query = query.unsqueeze(1)  # [batch_size, 1, hidden_dim]
-        if key.dim() == 2:
-            key = key.unsqueeze(1)
-        if value.dim() == 2:
-            value = value.unsqueeze(1)
-
-        # Get actual dimensions from tensors (handles DataParallel batch splitting)
-        batch_size = query.size(0)
-        seq_len_q = query.size(1)
-        seq_len_k = key.size(1)
-
-        # Project to Q, K, V
-        Q = self.q_proj(query)  # [batch_size, seq_len_q, hidden_dim]
-        K = self.k_proj(key)  # [batch_size, seq_len_k, hidden_dim]
-        V = self.v_proj(value)  # [batch_size, seq_len_v, hidden_dim]
-
-        # Reshape for multi-head attention
-        Q = Q.view(batch_size, seq_len_q, self.num_heads, self.head_dim).transpose(1, 2)
-        K = K.view(batch_size, seq_len_k, self.num_heads, self.head_dim).transpose(1, 2)
-        V = V.view(batch_size, seq_len_k, self.num_heads, self.head_dim).transpose(1, 2)
-
-        # Compute attention scores
-        scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale
-
-        # Apply attention mask if provided
-        if attention_mask is not None:
-            # Expand mask for multi-head attention
-            mask = attention_mask.unsqueeze(1).unsqueeze(
-                1
-            )  # [batch_size, 1, 1, seq_len_k]
-            scores.masked_fill_(~mask.bool(), float("-inf"))
-
-        # Apply softmax
-        attention_weights = F.softmax(scores, dim=-1)
-        attention_weights = self.dropout(attention_weights)
-
-        # Apply attention to values
-        output = torch.matmul(attention_weights, V)
-
-        # Reshape and project output
-        output = (
-            output.transpose(1, 2)
-            .contiguous()
-            .view(batch_size, seq_len_q, self.hidden_dim)
-        )
-        output = self.out_proj(output)
-
-        # Average attention weights across heads for visualization
-        attention_weights = attention_weights.mean(dim=1)
-
-        return output, attention_weights
-
-
 class SelfAttentionBlock(nn.Module):
     """Self-attention block for LRCN."""
 
@@ -123,8 +24,14 @@ class SelfAttentionBlock(nn.Module):
         if feedforward_dim is None:
             feedforward_dim = hidden_dim * 4
 
-        # Multi-head self-attention
-        self.self_attention = MultiHeadAttention(hidden_dim, num_heads, dropout)
+        # Multi-head self-attention (PyTorch native)
+        self.self_attention = nn.MultiheadAttention(
+            embed_dim=hidden_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True,
+            bias=True,
+        )
 
         # Feed-forward network
         self.ffn = nn.Sequential(
@@ -154,7 +61,16 @@ class SelfAttentionBlock(nn.Module):
             Tuple of (output, attention_weights)
         """
         # Self-attention with residual connection
-        attn_output, attention_weights = self.self_attention(x, x, x, attention_mask)
+        key_padding_mask = (
+            ~attention_mask.bool() if attention_mask is not None else None
+        )
+        attn_output, attention_weights = self.self_attention(
+            query=x,
+            key=x,
+            value=x,
+            key_padding_mask=key_padding_mask,
+            need_weights=True,
+        )
         x = self.norm1(x + attn_output)
 
         # Feed-forward with residual connection
@@ -180,8 +96,14 @@ class GuidedAttentionBlock(nn.Module):
         if feedforward_dim is None:
             feedforward_dim = hidden_dim * 4
 
-        # Cross-attention (visual attends to text)
-        self.cross_attention = MultiHeadAttention(hidden_dim, num_heads, dropout)
+        # Cross-attention (visual attends to text) - PyTorch native
+        self.cross_attention = nn.MultiheadAttention(
+            embed_dim=hidden_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True,
+            bias=True,
+        )
 
         # Feed-forward network
         self.ffn = nn.Sequential(
@@ -213,11 +135,13 @@ class GuidedAttentionBlock(nn.Module):
             Tuple of (output, attention_weights)
         """
         # Guided attention: visual queries attend to text keys/values
+        key_padding_mask = ~text_mask.bool() if text_mask is not None else None
         attn_output, attention_weights = self.cross_attention(
             query=visual_features,
             key=text_features,
             value=text_features,
-            attention_mask=text_mask,
+            key_padding_mask=key_padding_mask,
+            need_weights=True,
         )
         visual_features = self.norm1(visual_features + attn_output)
 

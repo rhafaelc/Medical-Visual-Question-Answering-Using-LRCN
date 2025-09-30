@@ -9,6 +9,8 @@ from pathlib import Path
 
 # Force using only first GPU to avoid DataParallel issues
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Fix tokenizer parallelism warnings with multiprocessing
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # Import required modules at top level
 try:
