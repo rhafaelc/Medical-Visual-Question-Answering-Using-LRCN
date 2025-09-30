@@ -405,7 +405,8 @@ def main():
             batch_size=args.batch_size,
             shuffle=True,
             collate_fn=collate_fn,
-            num_workers=0,
+            num_workers=4,  # Parallel data loading for better GPU utilization
+            pin_memory=True,  # Faster GPU transfer
         )
         val_loader = (
             DataLoader(
@@ -413,7 +414,8 @@ def main():
                 batch_size=args.batch_size,
                 shuffle=False,
                 collate_fn=collate_fn,
-                num_workers=0,
+                num_workers=4,  # Parallel data loading
+                pin_memory=True,  # Faster GPU transfer
             )
             if val_dataset
             else None
