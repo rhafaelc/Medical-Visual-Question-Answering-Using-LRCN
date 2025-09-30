@@ -292,6 +292,23 @@ def main():
         help="Save the trained model",
     )
 
+    # Backbone freezing control
+    parser.add_argument(
+        "--freeze-visual-backbone",
+        action="store_true",
+        help="Freeze ViT backbone (only train projection)",
+    )
+    parser.add_argument(
+        "--freeze-text-backbone",
+        action="store_true",
+        help="Freeze BioBERT backbone (only train projection)",
+    )
+    parser.add_argument(
+        "--unfreeze-all",
+        action="store_true",
+        help="Unfreeze all backbones for full fine-tuning",
+    )
+
     # Advanced training configuration (with defaults from ModelConfig)
     parser.add_argument(
         "--attention-heads", type=int, default=8, help="Number of attention heads (h)"
@@ -332,6 +349,23 @@ def main():
         use_lrm = False
     else:
         use_lrm = ModelConfig.USE_LRM
+
+    # Determine backbone freezing strategy
+    if args.unfreeze_all:
+        freeze_visual = False
+        freeze_text = False
+        print("🔥 Full fine-tuning: All backbones unfrozen")
+    else:
+        freeze_visual = args.freeze_visual_backbone
+        freeze_text = args.freeze_text_backbone
+        if freeze_visual and freeze_text:
+            print("🧊 Conservative approach: Both backbones frozen")
+        elif freeze_visual:
+            print("🧊 Visual frozen, Text unfrozen")
+        elif freeze_text:
+            print("🧊 Text frozen, Visual unfrozen")
+        else:
+            print("🔥 Default: Both backbones unfrozen (efficient fine-tuning)")
 
     # Device setup - Force single GPU (T4)
     if args.device == "auto":
@@ -435,12 +469,38 @@ def main():
             use_lrm=use_lrm,
             visual_encoder_type="vit",
             text_encoder_type="biobert",
+            freeze_backbones=freeze_visual and freeze_text,  # Both or neither
         )
 
         # Multi-GPU setup - DISABLED (use single GPU for stability)
         # Force single GPU usage
         print("Using single GPU (multi-GPU disabled for stability)")
         model.to(device)
+
+        # Report model parameters for research documentation
+        total_params = sum(p.numel() for p in model.parameters())
+        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        frozen_params = total_params - trainable_params
+
+        # Determine strategy description
+        if freeze_visual and freeze_text:
+            strategy_desc = "Both backbones frozen"
+        elif freeze_visual:
+            strategy_desc = "Visual frozen, Text unfrozen"
+        elif freeze_text:
+            strategy_desc = "Text frozen, Visual unfrozen"
+        else:
+            strategy_desc = "Both backbones unfrozen"
+
+        print(f"\n=== Model Parameter Report ===")
+        print(f"Total parameters: {total_params:,}")
+        print(f"Trainable parameters: {trainable_params:,}")
+        print(f"Frozen parameters: {frozen_params:,}")
+        print(f"Backbone strategy: {strategy_desc}")
+        print(
+            f"Model size (MB): {total_params * 4 / 1024 / 1024:.2f}"
+        )  # Assuming float32
+        print(f"==================================\n")
 
         # Initialize training components with Cross-Entropy Loss
         criterion = nn.CrossEntropyLoss()
