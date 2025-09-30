@@ -55,7 +55,7 @@ class LRCN(nn.Module):
         self.visual_encoder_type = visual_encoder_type
         self.text_encoder_type = text_encoder_type
 
-        # Visual encoder (ViT or ViT+Linear) - Configurable freezing
+        # Visual encoder (ViT-B/32 with linear projection to 512)
         if visual_encoder_type == "vit-linear":
             self.visual_encoder = ViTVisualEncoder(
                 image_size=image_size,
@@ -64,6 +64,7 @@ class LRCN(nn.Module):
                 pretrained=vit_pretrained,
                 use_linear_projection=True,
                 freeze_backbone=freeze_backbones,
+                variant="b32",  # Use ViT-B/32
             )
         else:  # vit
             self.visual_encoder = ViTVisualEncoder(
@@ -72,15 +73,16 @@ class LRCN(nn.Module):
                 hidden_dim=hidden_dim,
                 pretrained=vit_pretrained,
                 freeze_backbone=freeze_backbones,
+                variant="b32",  # Use ViT-B/32
             )
 
-        # Text encoder (BioBERT or BioBERT+LSTM) - Configurable freezing
+        # Text encoder (BioBERT + LSTM → 512 dimensions)
         self.text_encoder = BioBERTTextEncoder(
             model_name=biobert_model,
             hidden_dim=hidden_dim,
             max_length=max_text_length,
             freeze_bert=freeze_backbones,
-            use_lstm=(text_encoder_type == "biobert-lstm"),
+            use_lstm=True,  # Always use LSTM for 512-dim output
         )
 
         # Layer-Residual Co-Attention Mechanism
