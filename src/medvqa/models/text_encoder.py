@@ -100,8 +100,12 @@ class BioBERTTextEncoder(nn.Module):
             return_tensors="pt",
         )
 
-        input_ids = encoding["input_ids"]
-        attention_mask = encoding["attention_mask"]
+        # DataParallel handles device placement - get device from model
+        device = next(self.parameters()).device
+
+        # Move tensors to device
+        input_ids = encoding["input_ids"].to(device)
+        attention_mask = encoding["attention_mask"].to(device)
 
         # Encode with BioBERT
         outputs = self.bert(
